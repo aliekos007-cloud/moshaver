@@ -5,11 +5,22 @@ from .models import Patient
 class PatientForm(forms.ModelForm):
     class Meta:
         model = Patient
-        exclude = ("file_number", "created_at", "updated_at")
+        exclude = (
+            "file_number",
+            "created_at",
+            "updated_at",
+            # فیلدهای سیستمی — در فرم نمایش داده نمی‌شن
+            "country",
+            "confidentiality_level",
+            "outstanding_balance",
+            "credit_limit",
+            "assigned_consultant",
+            "is_foreign",
+            "foreign_id",
+        )
         widgets = {
             "birth_date": forms.HiddenInput(attrs={"id": "id_birth_date_gregorian"}),
         }
-        # پیام خطای اختصاصی برای کد ملی تکراری
         error_messages = {
             "national_code": {
                 "unique": "این کد ملی قبلاً برای مراجع دیگری ثبت شده است.",
@@ -17,6 +28,15 @@ class PatientForm(forms.ModelForm):
             },
             "mobile": {
                 "required": "وارد کردن شماره موبایل الزامی است.",
+            },
+            "first_name": {
+                "required": "وارد کردن نام الزامی است.",
+            },
+            "last_name": {
+                "required": "وارد کردن نام خانوادگی الزامی است.",
+            },
+            "gender": {
+                "required": "انتخاب جنسیت الزامی است.",
             },
         }
 

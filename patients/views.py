@@ -53,12 +53,24 @@ def patient_edit(request, pk):
 @login_required
 def patient_detail(request, pk):
     from accounts import permissions
+    from records.models import Session
+
     p = get_object_or_404(Patient, pk=pk)
-    visits = p.visits.select_related("physician").all()
+
+    # جلسات این مراجع
+    sessions = Session.objects.filter(
+        client=p,
+    ).select_related("consultant", "room").order_by("-scheduled_start")
+
+    # آمار
+    total_sessions = sessions.filter(status="completed").count()
+
     log_action(request, "view", p, description="مشاهده پرونده مراجع")
+
     return render(request, "patients/detail.html", {
         "patient": p,
-        "visits": visits,
+        "sessions": sessions,
+        "total_sessions": total_sessions,
         "can_view_medical": permissions.can_view_medical(request.user),
         "can_edit_medical": permissions.can_edit_medical(request.user),
     })

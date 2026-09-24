@@ -1,33 +1,44 @@
 {% extends "base.html" %}
 {% load jalali_tags %}
-{% block title %}{{ patient.full_name }} — طبیب{% endblock %}
-{% block header %}<i class="bi bi-folder2-open"></i> پرونده الکترونیک{% endblock %}
-{% block subtitle %}<div class="page-subtitle">{{ patient.full_name }} — شماره پرونده {{ patient.file_number }}</div>{% endblock %}
+{% load persian_numbers %}
+
+{% block title %}{{ patient.full_name }}{% endblock %}
+
+{% block header %}<i class="bi bi-folder2-open"></i> پرونده مراجع{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    <span class="patient-name-inline">{{ patient.full_name }}</span>
+    <span class="patient-file-inline">پرونده {{ patient.file_number }}</span>
+</div>
+{% endblock %}
 
 {% block topbar_actions %}
-    <a href="{% url 'visit_create' patient.pk %}" class="btn btn-success">
-        <i class="bi bi-plus-circle-fill"></i> مراجعه جدید
-    </a>
-    <a href="{% url 'document_upload' patient.pk %}" class="btn btn-primary">
-        <i class="bi bi-cloud-arrow-up-fill"></i> بارگذاری مدرک
+    <a href="{% url 'session_create' %}?client={{ patient.pk }}" class="btn btn-success">
+        <i class="bi bi-plus-circle-fill"></i> جلسهٔ جدید
     </a>
     <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-outline-secondary">
         <i class="bi bi-pencil"></i> ویرایش
     </a>
+    <a href="{% url 'patient_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت
+    </a>
 {% endblock %}
 
 {% block content %}
-<div class="row g-4">
-    <div class="col-lg-5">
-        <div class="card mb-3">
+<div class="row g-4 align-items-stretch">
+    <div class="col-lg-5 d-flex flex-column gap-3">
+
+        <!-- ===== مشخصات هویتی ===== -->
+        <div class="card">
             <div class="card-body">
                 <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مشخصات هویتی</h6>
                 <table class="table table-sm mb-0">
-                    <tr><th class="text-muted" style="width: 40%;">شماره پرونده</th><td><strong>{{ patient.file_number }}</strong></td></tr>
-                    <tr><th class="text-muted">نام پدر</th><td>{{ patient.father_name|default:"—" }}</td></tr>
-                    <tr><th class="text-muted">کد ملی</th><td>{{ patient.national_code|default:"—" }}</td></tr>
+                    <tr><th class="text-muted" style="width: 40%;">کد ملی</th><td><strong>{{ patient.national_code|default:"—" }}</strong></td></tr>
                     <tr><th class="text-muted">جنسیت</th><td>{{ patient.get_gender_display }}</td></tr>
+                    <tr><th class="text-muted">نام پدر</th><td>{{ patient.father_name|default:"—" }}</td></tr>
+                    {% if patient.birth_date %}
                     <tr><th class="text-muted">تاریخ تولد</th><td>{{ patient.birth_date|jalali_full }}</td></tr>
+                    {% endif %}
                     <tr><th class="text-muted">وضعیت تأهل</th><td>{{ patient.get_marital_status_display|default:"—" }}</td></tr>
                     <tr><th class="text-muted">شغل</th><td>{{ patient.job|default:"—" }}</td></tr>
                     <tr><th class="text-muted">تحصیلات</th><td>{{ patient.education|default:"—" }}</td></tr>
@@ -35,13 +46,24 @@
             </div>
         </div>
 
+        <!-- ===== تماس ===== -->
         <div class="card">
             <div class="card-body">
                 <h6 class="text-primary mb-3"><i class="bi bi-telephone"></i> تماس و آدرس</h6>
                 <table class="table table-sm mb-0">
                     <tr><th class="text-muted" style="width: 40%;">موبایل</th><td>{{ patient.mobile }}</td></tr>
                     <tr><th class="text-muted">تلفن</th><td>{{ patient.phone|default:"—" }}</td></tr>
-                    <tr><th class="text-muted">تماس اضطراری</th><td>{{ patient.emergency_name|default:"—" }} — {{ patient.emergency_phone|default:"" }}</td></tr>
+                    <tr>
+                        <th class="text-muted">تماس اضطراری</th>
+                        <td>
+                            {% if patient.emergency_name %}
+                                {{ patient.emergency_name }} — {{ patient.emergency_phone|default:"" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if patient.province or patient.city or patient.street %}
                     <tr>
                         <th class="text-muted">آدرس</th>
                         <td>
@@ -49,176 +71,186 @@
                             {{ patient.street }} {{ patient.alley }} {{ patient.plaque }}
                         </td>
                     </tr>
+                    {% endif %}
                 </table>
+            </div>
+        </div>
+
+        <!-- ===== مالی ===== -->
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-wallet2"></i> وضعیت مالی</h6>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div class="stat-mini {% if patient.outstanding_balance > 0 %}danger{% else %}success{% endif %}">
+                            <div class="stat-mini-label">بدهی</div>
+                            <div class="stat-mini-value">{{ patient.outstanding_balance|pnum }} <small>تومان</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-mini">
+                            <div class="stat-mini-label">جلسات انجام‌شده</div>
+                            <div class="stat-mini-value">{{ total_sessions|default:0|pnum }}</div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-7">
-
-        <!-- ===== مدارک و تصاویر ===== -->
-        <div class="card mb-4">
-            <div class="card-body">
+    <div class="col-lg-7 d-flex">
+        <!-- ===== جلسات ===== -->
+        <div class="card w-100">
+            <div class="card-body d-flex flex-column">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="text-primary mb-0"><i class="bi bi-images"></i> مدارک و تصاویر</h6>
-                    <a href="{% url 'document_upload' patient.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus-lg"></i> افزودن مدرک
+                    <h6 class="text-primary mb-0">
+                        <i class="bi bi-calendar2-check"></i> جلسات
+                        {% if sessions %}
+                            <span class="badge bg-primary ms-2">{{ sessions|length|pnum }}</span>
+                        {% endif %}
+                    </h6>
+                    <a href="{% url 'session_create' %}?client={{ patient.pk }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-lg"></i> جلسهٔ جدید
                     </a>
                 </div>
 
-                {% if patient.documents.all %}
-                    <div class="row g-2">
-                        {% for doc in patient.documents.all %}
-                            <div class="col-md-4">
-                                <div class="border rounded-3 p-2 h-100" style="border-color: #e2e8f0 !important; background: #f8fafc;">
-                                    <div class="text-center mb-2" style="height: 110px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 8px; overflow: hidden;">
-                                        {% if doc.is_image %}
-                                            <img src="{{ doc.file.url }}" alt="{{ doc.title }}" style="max-width: 100%; max-height: 110px; object-fit: cover;">
-                                        {% elif doc.is_pdf %}
-                                            <i class="bi bi-file-earmark-pdf-fill" style="font-size: 3rem; color: #dc2626;"></i>
-                                        {% else %}
-                                            <i class="bi bi-file-earmark-medical-fill" style="font-size: 3rem; color: #2563eb;"></i>
-                                        {% endif %}
-                                    </div>
-                                    <div class="text-center">
-                                        <div class="badge bg-info text-dark mb-1" style="font-size: .65rem;">{{ doc.get_document_type_display }}</div>
-                                        {% if doc.title %}
-                                            <div class="small fw-bold text-truncate" title="{{ doc.title }}">{{ doc.title }}</div>
-                                        {% endif %}
-                                        <div class="text-muted" style="font-size: .68rem;">{{ doc.uploaded_at|jalali }}</div>
-                                        <div class="text-muted" style="font-size: .65rem;">{{ doc.file_size_display }}</div>
-                                    </div>
-                                    <div class="d-flex gap-1 mt-2">
-                                        <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill" title="مشاهده">
-                                            <i class="bi bi-eye"></i>
-                                        </a>
-                                        <a href="{{ doc.file.url }}" download class="btn btn-sm btn-outline-secondary" title="دانلود">
-                                            <i class="bi bi-download"></i>
-                                        </a>
-                                        <form method="post" action="{% url 'document_delete' doc.pk %}" class="m-0" onsubmit="return confirm('این مدرک حذف شود؟');">
-                                            {% csrf_token %}
-                                            <button class="btn btn-sm btn-outline-danger" title="حذف">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
+                {% if sessions %}
+                    <div class="sessions-scroll">
+                        {% for s in sessions %}
+                        <a href="{% url 'session_detail' s.pk %}" class="session-mini-card" data-status="{{ s.status }}">
+                            <div class="session-mini-time">
+                                <div class="hour">{{ s.scheduled_start|jalali_time }}</div>
+                                <div class="date">{{ s.scheduled_start|jalali_short }}</div>
+                            </div>
+                            <div class="session-mini-main">
+                                <div class="fw-bold">{{ s.consultant.get_full_name }}</div>
+                                <div class="small text-muted">
+                                    {{ s.get_session_type_display }}
+                                    {% if s.room %} — {{ s.room.name }}{% endif %}
+                                    {% if s.actual_duration_minutes %} — {{ s.actual_duration_minutes|pnum }} دقیقه{% endif %}
                                 </div>
                             </div>
+                            <div class="session-mini-status status-{{ s.status }}">
+                                {{ s.get_status_display }}
+                            </div>
+                        </a>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <div class="empty-state">
-                        <i class="bi bi-image"></i>
-                        هنوز مدرکی بارگذاری نشده است.
-                        <div class="mt-3">
-                            <a href="{% url 'document_upload' patient.pk %}" class="btn btn-sm btn-primary">
-                                <i class="bi bi-cloud-arrow-up"></i> بارگذاری اولین مدرک
+                    <div class="empty-state flex-grow-1 d-flex flex-column justify-content-center">
+                        <i class="bi bi-calendar-x"></i>
+                        <div class="mb-3">هنوز جلسه‌ای برای این مراجع ثبت نشده است.</div>
+                        <div>
+                            <a href="{% url 'session_create' %}?client={{ patient.pk }}" class="btn btn-success">
+                                <i class="bi bi-plus-circle"></i> ثبت اولین جلسه
                             </a>
                         </div>
                     </div>
                 {% endif %}
-            </div>
-        </div>
-        
-                <!-- ===== رضایت‌نامه‌ها ===== -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6 class="text-primary mb-0"><i class="bi bi-file-earmark-check-fill"></i> رضایت‌نامه‌ها</h6>
-                    <a href="{% url 'consent_create' patient.pk %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-plus-lg"></i> افزودن
-                    </a>
-                </div>
-                {% if patient.consents.all %}
-                    <div class="list-group list-group-flush">
-                        {% for c in patient.consents.all %}
-                            <a href="{% url 'consent_detail' c.pk %}" class="list-group-item list-group-item-action px-0 border-bottom d-flex justify-content-between align-items-center">
-                                <div>
-                                    <strong style="font-size: .88rem;">{{ c.title }}</strong>
-                                    <div class="small text-muted">
-                                        {{ c.consent_date|jalali }}
-                                        {% if c.status == "signed" %} • <span class="badge bg-success" style="font-size: .65rem;">امضا شده</span>{% endif %}
-                                    </div>
-                                </div>
-                                <i class="bi bi-chevron-left text-muted"></i>
-                            </a>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div class="text-muted text-center py-3 small">هنوز رضایت‌نامه‌ای ثبت نشده است.</div>
-                {% endif %}
-            </div>
-        </div>
-
-                <!-- ===== درمان‌های تخصصی ===== -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h6 class="text-primary mb-3"><i class="bi bi-heart-pulse"></i> درمان‌های تخصصی</h6>
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <a href="{% url 'therapy_list' patient.pk 'manual' %}" class="text-decoration-none">
-                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#2563eb' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
-                                <i class="bi bi-hand-index-thumb" style="font-size: 2rem; color: #2563eb;"></i>
-                                <div class="mt-2 fw-bold" style="color: #0f172a;">اعمال یداوی</div>
-                                <div class="small text-muted">{{ patient.manual_therapies.count }} دوره</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="{% url 'therapy_list' patient.pk 'reflex' %}" class="text-decoration-none">
-                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#ecfeff'; this.style.borderColor='#06b6d4' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
-                                <i class="bi bi-brightness-high" style="font-size: 2rem; color: #06b6d4;"></i>
-                                <div class="mt-2 fw-bold" style="color: #0f172a;">بازتاب‌درمانی</div>
-                                <div class="small text-muted">{{ patient.reflex_therapies.count }} دوره</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-md-4">
-                        <a href="{% url 'therapy_list' patient.pk 'discopathy' %}" class="text-decoration-none">
-                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#fef3c7'; this.style.borderColor='#f59e0b' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
-                                <i class="bi bi-person-arms-up" style="font-size: 2rem; color: #f59e0b;"></i>
-                                <div class="mt-2 fw-bold" style="color: #0f172a;">دیسکوپاتی</div>
-                                <div class="small text-muted">{{ patient.discopathies.count }} پرونده</div>
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ===== تاریخچه مراجعات ===== -->
-        <div class="card">
-            <div class="card-body">
-                <h6 class="text-primary mb-3"><i class="bi bi-clock-history"></i> تاریخچه مراجعات</h6>
-                {% for v in visits %}
-                    <div class="border rounded-3 p-3 mb-2" style="border-color: #e2e8f0 !important; background: #f8fafc;">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong class="text-dark">{{ v.visited_at|jalali_datetime }}</strong>
-                            <span class="badge bg-primary">{{ v.physician.get_full_name }}</span>
-                        </div>
-                        {% if v.chief_complaint %}
-                            <div class="small mb-1"><b class="text-muted">علت مراجعه:</b> {{ v.chief_complaint }}</div>
-                        {% endif %}
-                        {% if v.diagnosis %}
-                            <div class="small mb-2"><b class="text-muted">تشخیص:</b> {{ v.diagnosis }}</div>
-                        {% endif %}
-                        <a href="{% url 'visit_detail' v.pk %}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-eye"></i> مشاهده جزئیات
-                        </a>
-                    </div>
-                {% empty %}
-                    <div class="empty-state">
-                        <i class="bi bi-clipboard2-x"></i>
-                        تا کنون مراجعه‌ای برای این مراجع ثبت نشده است.
-                        <div class="mt-3">
-                            <a href="{% url 'visit_create' patient.pk %}" class="btn btn-sm btn-success">
-                                <i class="bi bi-plus-circle"></i> ثبت اولین مراجعه
-                            </a>
-                        </div>
-                    </div>
-                {% endfor %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== نام مراجع بزرگ و واضح ===== */
+    .patient-name-inline {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-left: .5rem;
+    }
+
+    .patient-file-inline {
+        font-size: .78rem;
+        color: #94a3b8;
+        background: #f1f5f9;
+        padding: .15rem .6rem;
+        border-radius: 999px;
+        margin-right: .5rem;
+    }
+
+    /* ===== کارت‌های مینی ===== */
+    .stat-mini {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: .75rem;
+        border-right: 3px solid #94a3b8;
+    }
+    .stat-mini.success { border-right-color: #10b981; background: #f0fdf4; }
+    .stat-mini.danger { border-right-color: #ef4444; background: #fef2f2; }
+    .stat-mini-label { font-size: .72rem; color: #64748b; margin-bottom: .2rem; }
+    .stat-mini-value { font-weight: 700; color: #0f172a; font-size: .95rem; }
+    .stat-mini-value small { font-weight: 400; font-size: .7rem; color: #94a3b8; }
+
+    /* ===== لیست جلسات ===== */
+    .sessions-scroll {
+        max-height: 500px;
+        overflow-y: auto;
+        padding-left: .25rem;
+    }
+    .sessions-scroll::-webkit-scrollbar { width: 6px; }
+    .sessions-scroll::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 3px;
+    }
+
+    .session-mini-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: .85rem 1rem;
+        border-radius: 12px;
+        background: #f8fafc;
+        margin-bottom: .6rem;
+        text-decoration: none;
+        color: inherit;
+        transition: all .15s;
+        border-right: 4px solid #cbd5e1;
+    }
+    .session-mini-card:hover {
+        background: #fff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        color: inherit;
+    }
+    .session-mini-card[data-status="scheduled"] { border-right-color: #94a3b8; }
+    .session-mini-card[data-status="in_progress"] { border-right-color: #f59e0b; }
+    .session-mini-card[data-status="awaiting_payment"] { border-right-color: #0ea5e9; }
+    .session-mini-card[data-status="completed"] { border-right-color: #10b981; }
+
+    .session-mini-time {
+        text-align: center;
+        min-width: 70px;
+    }
+    .session-mini-time .hour {
+        font-weight: 700;
+        color: #0f172a;
+        font-family: 'Courier New', monospace;
+    }
+    .session-mini-time .date {
+        font-size: .7rem;
+        color: #94a3b8;
+    }
+
+    .session-mini-main {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .session-mini-status {
+        font-size: .72rem;
+        padding: .25rem .65rem;
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-scheduled { background: rgba(100,116,139,.12); color: #475569; }
+    .status-in_progress { background: rgba(245,158,11,.12); color: #d97706; }
+    .status-paused { background: rgba(139,92,246,.12); color: #7c3aed; }
+    .status-awaiting_payment { background: rgba(14,165,233,.12); color: #0284c7; }
+    .status-completed { background: rgba(16,185,129,.12); color: #059669; }
+    .status-cancelled { background: rgba(239,68,68,.12); color: #dc2626; }
+</style>
 {% endblock %}
