@@ -93,7 +93,7 @@ class AppointmentForm(forms.ModelForm):
         from patients.models import Patient
         self.fields["patient"].queryset = Patient.objects.all()[:1000]
         self.fields["patient"].required = True
-        self.fields["patient"].empty_label = "— انتخاب بیمار —"
+        self.fields["patient"].empty_label = "— انتخاب مراجع —"
 
         self.fields["physician"].queryset = self.fields["physician"].queryset.filter(
             role__in=["physician", "manager"]

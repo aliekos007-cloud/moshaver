@@ -6,7 +6,7 @@ from patients.models import Patient
 class Visit(models.Model):
     patient = models.ForeignKey(
         Patient, on_delete=models.CASCADE,
-        related_name="visits", verbose_name="بیمار",
+        related_name="visits", verbose_name="مراجع",
     )
     physician = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="طبیب",
@@ -20,7 +20,7 @@ class Visit(models.Model):
 
     chief_complaint = models.TextField("علت مراجعه", blank=True)
     history = models.TextField("شرح حال", blank=True)
-    brief_history = models.TextField("شرح مختصر بیماری", blank=True)
+    brief_history = models.TextField("شرح مختصر مراجعی", blank=True)
     diagnosis = models.TextField("تشخیص", blank=True)
     treatment_plan = models.TextField("برنامه درمان", blank=True)
     follow_up = models.TextField("نتیجه پیگیری", blank=True)

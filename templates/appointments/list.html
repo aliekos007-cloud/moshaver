@@ -20,7 +20,7 @@
     <div class="card-body">
         <form method="get" class="row g-2">
             <div class="col-md-3">
-                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جست‌وجوی بیمار...">
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جست‌وجوی مراجع...">
             </div>
             <div class="col-md-2">
                 <select name="status" class="form-select">
@@ -60,7 +60,7 @@
         <tr>
             <th>تاریخ</th>
             <th>ساعت</th>
-            <th>بیمار</th>
+            <th>مراجع</th>
             <th>طبیب</th>
             <th>وضعیت</th>
             <th>منبع</th>
@@ -72,7 +72,7 @@
             <tr>
                 <td data-label="تاریخ">{{ a.date|jalali }}</td>
                 <td data-label="ساعت"><span class="badge bg-light text-dark">{{ a.start_time|time:"H:i" }}</span></td>
-                <td data-label="بیمار">
+                <td data-label="مراجع">
                     <strong>{{ a.patient.full_name }}</strong>
                     <div class="small text-muted">{{ a.patient.mobile }}</div>
                 </td>

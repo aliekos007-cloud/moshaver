@@ -86,7 +86,7 @@
             direction: ltr;
         }
 
-        /* ===== اطلاعات بیمار ===== */
+        /* ===== اطلاعات مراجع ===== */
         .patient-box {
             display: flex;
             gap: 12px;
@@ -307,9 +307,9 @@
         </div>
     </div>
 
-    <!-- ===== اطلاعات بیمار ===== -->
+    <!-- ===== اطلاعات مراجع ===== -->
     <div class="patient-box">
-        <div class="item"><b>نام بیمار:</b> {{ visit.patient.full_name }}</div>
+        <div class="item"><b>نام مراجع:</b> {{ visit.patient.full_name }}</div>
         {% if visit.patient.file_number %}
             <div class="item"><b>شماره پرونده:</b> {{ visit.patient.file_number }}</div>
         {% endif %}

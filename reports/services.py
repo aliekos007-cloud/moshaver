@@ -44,7 +44,7 @@ def compute_stats(date_from, date_to):
     from consent.models import PatientConsent
     from inventory.models import Item
 
-    # === بیماران ===
+    # === مراجعین ===
     new_patients = Patient.objects.filter(created_at__date__gte=date_from, created_at__date__lte=date_to).count()
     total_patients = Patient.objects.count()
 
@@ -133,7 +133,7 @@ def get_daily_chart(date_from, date_to, metric="visits"):
 
 
 def get_top_patients(date_from, date_to, limit=10):
-    """بیماران با بیشترین مراجعه در بازه."""
+    """مراجعین با بیشترین مراجعه در بازه."""
     from records.models import Visit
     return (
         Visit.objects

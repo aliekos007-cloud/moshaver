@@ -3,7 +3,7 @@
 {% block header %}<i class="bi bi-clipboard-pulse"></i> تبدیل نوبت به ویزیت{% endblock %}
 {% block subtitle %}
 <div class="page-subtitle">
-    بیمار: <strong>{{ appointment.patient.full_name }}</strong> — ساعت: {{ appointment.start_time|time:"H:i" }}
+    مراجع: <strong>{{ appointment.patient.full_name }}</strong> — ساعت: {{ appointment.start_time|time:"H:i" }}
 </div>
 {% endblock %}
 

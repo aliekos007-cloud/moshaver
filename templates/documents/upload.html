@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}بارگذاری مدرک — طبیب{% endblock %}
 {% block header %}<i class="bi bi-cloud-arrow-up-fill"></i> بارگذاری مدرک{% endblock %}
-{% block subtitle %}<div class="page-subtitle">بیمار: <strong>{{ patient.full_name }}</strong> — پرونده {{ patient.file_number }}</div>{% endblock %}
+{% block subtitle %}<div class="page-subtitle">مراجع: <strong>{{ patient.full_name }}</strong> — پرونده {{ patient.file_number }}</div>{% endblock %}
 
 {% block topbar_actions %}
     <a href="{% url 'patient_detail' patient.pk %}" class="btn btn-outline-secondary">

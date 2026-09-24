@@ -180,7 +180,7 @@
             </td>
         </tr>
         {% if tx.patient %}
-            <tr><th>بیمار</th><td>{{ tx.patient.full_name }}</td></tr>
+            <tr><th>مراجع</th><td>{{ tx.patient.full_name }}</td></tr>
             {% if tx.patient.file_number %}<tr><th>شماره پرونده</th><td>{{ tx.patient.file_number }}</td></tr>{% endif %}
         {% endif %}
         <tr><th>ثبت‌کننده</th><td>{{ tx.created_by.get_full_name }}</td></tr>

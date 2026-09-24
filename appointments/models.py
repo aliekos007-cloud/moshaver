@@ -4,7 +4,7 @@ from django.db import models
 
 
 class WeeklySchedule(models.Model):
-    """برنامه‌ی هفتگی پزشک — تعیین ساعت‌های کاری هر روز هفته."""
+    """برنامه‌ی هفتگی مشاور — نسخهٔ قدیمی (فاز بعد بازنویسی می‌شود)."""
 
     WEEKDAYS = [
         (0, "شنبه"),
@@ -18,20 +18,20 @@ class WeeklySchedule(models.Model):
 
     physician = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        related_name="weekly_schedules", verbose_name="طبیب",
+        related_name="legacy_weekly_schedules", verbose_name="مشاور",
     )
     day_of_week = models.PositiveSmallIntegerField("روز هفته", choices=WEEKDAYS)
     start_time = models.TimeField("ساعت شروع")
     end_time = models.TimeField("ساعت پایان")
     slot_duration = models.PositiveSmallIntegerField(
-        "طول هر نوبت (دقیقه)", default=15,
-        help_text="مثال: ۱۵ دقیقه برای ویزیت معمولی، ۳۰ دقیقه برای مشاوره",
+        "طول هر نوبت (دقیقه)", default=50,
+        help_text="مثال: ۵۰ دقیقه برای مشاوره",
     )
     is_active = models.BooleanField("فعال", default=True)
 
     class Meta:
-        verbose_name = "برنامه هفتگی"
-        verbose_name_plural = "برنامه‌های هفتگی"
+        verbose_name = "برنامه هفتگی (قدیمی)"
+        verbose_name_plural = "برنامه‌های هفتگی (قدیمی)"
         ordering = ["physician", "day_of_week", "start_time"]
         unique_together = [("physician", "day_of_week", "start_time")]
         indexes = [
@@ -47,12 +47,12 @@ class WeeklySchedule(models.Model):
 
 
 class TimeOff(models.Model):
-    """روزهای تعطیل یا مرخصی پزشک."""
+    """روزهای تعطیل یا مرخصی مشاور."""
 
     REASONS = [
         ("vacation", "مرخصی"),
         ("holiday", "تعطیل رسمی"),
-        ("sick", "بیماری"),
+        ("sick", "مراجعی"),
         ("conference", "همایش / سفر"),
         ("personal", "شخصی"),
         ("other", "سایر"),
@@ -60,7 +60,7 @@ class TimeOff(models.Model):
 
     physician = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
-        related_name="time_offs", verbose_name="طبیب",
+        related_name="time_offs", verbose_name="مشاور",
     )
     date = models.DateField("تاریخ")
     all_day = models.BooleanField("تمام روز", default=True)
@@ -83,13 +83,13 @@ class TimeOff(models.Model):
 
 
 class Appointment(models.Model):
-    """یک نوبت ویزیت."""
+    """یک نوبت مشاوره."""
 
     STATUS = [
         ("scheduled", "برنامه‌ریزی‌شده"),
         ("confirmed", "تأیید شده"),
         ("arrived", "حاضر شد"),
-        ("in_progress", "در حال ویزیت"),
+        ("in_progress", "در حال مشاوره"),
         ("completed", "انجام شد"),
         ("cancelled", "لغو شده"),
         ("no_show", "غیبت"),
@@ -120,11 +120,11 @@ class Appointment(models.Model):
 
     patient = models.ForeignKey(
         "patients.Patient", on_delete=models.CASCADE,
-        related_name="appointments", verbose_name="بیمار",
+        related_name="appointments", verbose_name="مراجع",
     )
     physician = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
-        related_name="appointments", verbose_name="طبیب",
+        related_name="appointments", verbose_name="مشاور",
     )
     date = models.DateField("تاریخ نوبت")
     start_time = models.TimeField("ساعت شروع")
@@ -134,14 +134,14 @@ class Appointment(models.Model):
     reason = models.TextField("علت مراجعه", blank=True)
     note = models.TextField("یادداشت", blank=True)
 
-    # ====== تبدیل به مراجعه ======
+    # ====== تبدیل به جلسه ======
     visit = models.OneToOneField(
         "records.Visit", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="appointment",
-        verbose_name="مراجعه تبدیل‌شده",
+        verbose_name="جلسهٔ تبدیل‌شده",
     )
 
-    # ====== پرداخت (اختیاری — پیش‌فرض: نیاز ندارد) ======
+    # ====== پرداخت ======
     payment_status = models.CharField(
         "وضعیت پرداخت", max_length=20,
         choices=PAYMENT_STATUS, default="not_required",
@@ -167,7 +167,7 @@ class Appointment(models.Model):
     reminder_sent = models.BooleanField("پیامک یادآوری ارسال شد", default=False)
     reminder_sent_at = models.DateTimeField("زمان یادآوری", null=True, blank=True)
     reminder_response = models.CharField(
-        "پاسخ بیمار به یادآوری", max_length=200, blank=True, default="",
+        "پاسخ مراجع به یادآوری", max_length=200, blank=True, default="",
         help_text="مثلاً: تأیید شد، لغو شد",
     )
 
@@ -213,7 +213,7 @@ class Appointment(models.Model):
             "scheduled": ("bg-info text-dark", "برنامه‌ریزی‌شده"),
             "confirmed": ("bg-primary", "تأیید شده"),
             "arrived": ("bg-success", "حاضر شد"),
-            "in_progress": ("bg-warning text-dark", "در حال ویزیت"),
+            "in_progress": ("bg-warning text-dark", "در حال مشاوره"),
             "completed": ("bg-success", "انجام شد"),
             "cancelled": ("bg-secondary", "لغو شده"),
             "no_show": ("bg-danger", "غیبت"),

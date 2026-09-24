@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}تراکنش جدید — طبیب{% endblock %}
 {% block header %}<i class="bi bi-cash-stack"></i> ثبت تراکنش جدید{% endblock %}
-{% block subtitle %}{% if patient %}<div class="page-subtitle">بیمار: <strong>{{ patient.full_name }}</strong></div>{% endif %}{% endblock %}
+{% block subtitle %}{% if patient %}<div class="page-subtitle">مراجع: <strong>{{ patient.full_name }}</strong></div>{% endif %}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
@@ -60,7 +60,7 @@
                     {% if form.transaction_date.errors %}<div class="text-danger small mt-1">{{ form.transaction_date.errors.0 }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label">بیمار</label>
+                    <label class="form-label">مراجع</label>
                     {{ form.patient }}
                     {% if form.patient.errors %}<div class="text-danger small mt-1">{{ form.patient.errors.0 }}</div>{% endif %}
                 </div>

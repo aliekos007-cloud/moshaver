@@ -29,11 +29,11 @@ def patient_create(request):
         form = PatientForm(request.POST)
         if form.is_valid():
             p = form.save()
-            log_action(request, "create", p, description="ثبت بیمار جدید")
+            log_action(request, "create", p, description="ثبت مراجع جدید")
             return redirect("patient_detail", pk=p.pk)
     else:
         form = PatientForm()
-    return render(request, "patients/form.html", {"form": form, "title": "ثبت بیمار جدید"})
+    return render(request, "patients/form.html", {"form": form, "title": "ثبت مراجع جدید"})
 
 
 @medical_edit_required
@@ -43,7 +43,7 @@ def patient_edit(request, pk):
         form = PatientForm(request.POST, instance=p)
         if form.is_valid():
             form.save()
-            log_action(request, "update", p, description="ویرایش پرونده بیمار")
+            log_action(request, "update", p, description="ویرایش پرونده مراجع")
             return redirect("patient_detail", pk=p.pk)
     else:
         form = PatientForm(instance=p)
@@ -55,7 +55,7 @@ def patient_detail(request, pk):
     from accounts import permissions
     p = get_object_or_404(Patient, pk=pk)
     visits = p.visits.select_related("physician").all()
-    log_action(request, "view", p, description="مشاهده پرونده بیمار")
+    log_action(request, "view", p, description="مشاهده پرونده مراجع")
     return render(request, "patients/detail.html", {
         "patient": p,
         "visits": visits,

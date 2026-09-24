@@ -12,7 +12,7 @@ class PatientForm(forms.ModelForm):
         # پیام خطای اختصاصی برای کد ملی تکراری
         error_messages = {
             "national_code": {
-                "unique": "این کد ملی قبلاً برای بیمار دیگری ثبت شده است.",
+                "unique": "این کد ملی قبلاً برای مراجع دیگری ثبت شده است.",
                 "required": "وارد کردن کد ملی الزامی است.",
             },
             "mobile": {

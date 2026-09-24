@@ -19,7 +19,7 @@ class PatientDocument(models.Model):
 
     patient = models.ForeignKey(
         "patients.Patient", on_delete=models.CASCADE,
-        related_name="documents", verbose_name="بیمار",
+        related_name="documents", verbose_name="مراجع",
     )
     visit = models.ForeignKey(
         "records.Visit", on_delete=models.SET_NULL,
@@ -37,8 +37,8 @@ class PatientDocument(models.Model):
     uploaded_at = models.DateTimeField("تاریخ ثبت", auto_now_add=True)
 
     class Meta:
-        verbose_name = "مدرک بیمار"
-        verbose_name_plural = "مدارک بیمار"
+        verbose_name = "مدرک مراجع"
+        verbose_name_plural = "مدارک مراجع"
         ordering = ["-uploaded_at"]
 
     def __str__(self):

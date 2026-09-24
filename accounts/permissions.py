@@ -55,7 +55,7 @@ def can_view_appointments(user):
 
 
 def can_quick_register_patient(user):
-    """آیا کاربر می‌تونه بیمار جدید ثبت کنه (نسخه سریع)؟"""
+    """آیا کاربر می‌تونه مراجع جدید ثبت کنه (نسخه سریع)؟"""
     return is_manager(user) or is_physician(user) or is_secretary(user)
 
 

@@ -24,7 +24,7 @@
             <div class="card-body">
                 <h6 class="text-primary mb-3"><i class="bi bi-info-circle"></i> اطلاعات نوبت</h6>
                 <table class="table table-sm">
-                    <tr><th class="text-muted" style="width: 35%;">بیمار</th>
+                    <tr><th class="text-muted" style="width: 35%;">مراجع</th>
                         <td><strong>{{ appointment.patient.full_name }}</strong></td></tr>
                     <tr><th class="text-muted">شماره پرونده</th>
                         <td><span class="badge bg-light text-dark">{{ appointment.patient.file_number }}</span></td></tr>
@@ -73,10 +73,10 @@
             </div>
         </div>
 
-        <!-- بیمار -->
+        <!-- مراجع -->
         <div class="card mb-3">
             <div class="card-body">
-                <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> بیمار</h6>
+                <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مراجع</h6>
                 <div class="d-flex align-items-center gap-3 mb-3">
                     <div class="user-avatar" style="width: 48px; height: 48px; font-size: 1.2rem;">
                         {{ appointment.patient.first_name|first }}

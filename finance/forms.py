@@ -31,7 +31,7 @@ class TransactionForm(forms.ModelForm):
             self.fields["visit"].queryset = patient.visits.all()
 
         self.fields["patient"].required = False
-        self.fields["patient"].empty_label = "— بدون بیمار —"
+        self.fields["patient"].empty_label = "— بدون مراجع —"
         self.fields["visit"].required = False
         self.fields["visit"].empty_label = "— بدون مراجعه —"
         self.fields["transaction_type"].required = True

@@ -10,9 +10,9 @@ class VisitForm(forms.ModelForm):
             "diagnosis", "treatment_plan", "follow_up",
         )
         widgets = {
-            "chief_complaint": forms.Textarea(attrs={"rows": 3, "placeholder": "علت مراجعه بیمار..."}),
+            "chief_complaint": forms.Textarea(attrs={"rows": 3, "placeholder": "علت مراجعه مراجع..."}),
             "history": forms.Textarea(attrs={"rows": 3, "placeholder": "شرح حال کامل..."}),
-            "brief_history": forms.Textarea(attrs={"rows": 2, "placeholder": "خلاصه‌ای از بیماری..."}),
+            "brief_history": forms.Textarea(attrs={"rows": 2, "placeholder": "خلاصه‌ای از مراجعی..."}),
             "diagnosis": forms.Textarea(attrs={"rows": 3, "placeholder": "تشخیص پزشک..."}),
             "treatment_plan": forms.Textarea(attrs={"rows": 3, "placeholder": "برنامه درمان..."}),
             "follow_up": forms.Textarea(attrs={"rows": 2, "placeholder": "نتیجه پیگیری..."}),

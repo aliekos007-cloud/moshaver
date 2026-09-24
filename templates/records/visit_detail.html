@@ -4,7 +4,7 @@
 {% block header %}<i class="bi bi-file-medical-fill"></i> جزئیات مراجعه{% endblock %}
 {% block subtitle %}
 <div class="page-subtitle">
-    بیمار: <strong>{{ visit.patient.full_name }}</strong> —
+    مراجع: <strong>{{ visit.patient.full_name }}</strong> —
     تاریخ: {{ visit.visited_at|jalali_datetime }} —
     شماره نسخه: <strong style="direction: ltr; display: inline-block;">{{ visit.prescription_serial|default:"—" }}</strong>
 </div>
@@ -36,7 +36,7 @@
                     <div>{{ visit.history|default:"—"|linebreaksbr }}</div>
                 </div>
                 <div class="mb-3">
-                    <div class="text-muted small fw-bold mb-1">شرح مختصر بیماری</div>
+                    <div class="text-muted small fw-bold mb-1">شرح مختصر مراجعی</div>
                     <div>{{ visit.brief_history|default:"—"|linebreaksbr }}</div>
                 </div>
                 <div class="mb-3">

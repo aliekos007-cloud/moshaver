@@ -34,20 +34,20 @@
 
     <div class="card mb-3">
         <div class="card-body">
-            <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> بیمار</h6>
+            <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مراجع</h6>
             <div class="row g-3">
                 <div class="col-md-12 position-relative">
-                    <label class="form-label">بیمار <span class="required-star">*</span></label>
+                    <label class="form-label">مراجع <span class="required-star">*</span></label>
                     {% if patient %}
                         <input type="text" class="form-control" value="{{ patient.full_name }} — پرونده {{ patient.file_number }}" readonly>
                         <input type="hidden" name="patient" value="{{ patient.pk }}">
                         <div class="mt-2">
-                            <a href="{% url 'patient_create' %}" class="small">ثبت بیمار جدید</a>
+                            <a href="{% url 'patient_create' %}" class="small">ثبت مراجع جدید</a>
                         </div>
                     {% else %}
                         <div class="position-relative">
                             <input type="text" id="patient_search" class="form-control"
-                                   placeholder="نام، موبایل یا کد ملی بیمار را وارد کنید..."
+                                   placeholder="نام، موبایل یا کد ملی مراجع را وارد کنید..."
                                    autocomplete="off">
                             <div class="patient-search-results" id="patient_results"></div>
                         </div>
@@ -58,7 +58,7 @@
                             </div>
                         </div>
                         <div class="mt-2">
-                            <a href="{% url 'patient_create' %}" class="small">اگر بیمار جدید است، اینجا ثبت کنید</a>
+                            <a href="{% url 'patient_create' %}" class="small">اگر مراجع جدید است، اینجا ثبت کنید</a>
                         </div>
                     {% endif %}
                     {% if form.patient.errors %}<div class="text-danger small mt-1">{{ form.patient.errors.0 }}</div>{% endif %}
@@ -175,7 +175,7 @@ $(document).ready(function() {
     startInput.on("change", function() { startHidden.val($(this).val()); });
     endInput.on("change", function() { endHidden.val($(this).val()); });
 
-    // ===== جست‌وجوی بیمار (AJAX) =====
+    // ===== جست‌وجوی مراجع (AJAX) =====
     {% if not patient %}
     var searchInput = $("#patient_search");
     var resultsBox = $("#patient_results");
@@ -189,7 +189,7 @@ $(document).ready(function() {
             $.get("{% url 'patient_search_ajax' %}", {q: q}, function(data) {
                 resultsBox.empty();
                 if (data.results.length === 0) {
-                    resultsBox.html('<div class="patient-result text-muted small">بیماری با این مشخصات پیدا نشد. <a href="{% url 'patient_create' %}">ثبت بیمار جدید</a></div>').addClass("show");
+                    resultsBox.html('<div class="patient-result text-muted small">مراجعی با این مشخصات پیدا نشد. <a href="{% url 'patient_create' %}">ثبت مراجع جدید</a></div>').addClass("show");
                     return;
                 }
                 data.results.forEach(function(p) {

@@ -68,7 +68,7 @@
     <div class="col-md-3">
         <div class="stat-card">
             <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
-            <div class="stat-label">بیماران جدید</div>
+            <div class="stat-label">مراجعین جدید</div>
             <div class="stat-value">{{ stats.new_patients }}</div>
         </div>
     </div>
@@ -203,15 +203,15 @@
     </div>
 </div>
 
-<!-- Top بیماران و Top داروها -->
+<!-- Top مراجعین و Top داروها -->
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card">
             <div class="card-body">
-                <h6 class="text-primary mb-3"><i class="bi bi-trophy-fill"></i> بیماران با بیشترین مراجعه</h6>
+                <h6 class="text-primary mb-3"><i class="bi bi-trophy-fill"></i> مراجعین با بیشترین مراجعه</h6>
                 {% if top_patients %}
                     <table class="table table-sm">
-                        <thead><tr><th>#</th><th>بیمار</th><th>پرونده</th><th>تعداد مراجعه</th></tr></thead>
+                        <thead><tr><th>#</th><th>مراجع</th><th>پرونده</th><th>تعداد مراجعه</th></tr></thead>
                         <tbody>
                         {% for p in top_patients %}
                             <tr>
