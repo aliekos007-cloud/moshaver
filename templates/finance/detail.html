@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}جزئیات تراکنش — طبیب{% endblock %}
+{% block header %}<i class="bi bi-receipt"></i> جزئیات تراکنش{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    شماره رسید: <strong style="direction: ltr; display: inline-block;">{{ tx.receipt_number }}</strong>
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'receipt_print' tx.pk %}" target="_blank" class="btn btn-primary">
+        <i class="bi bi-printer-fill"></i> چاپ رسید
+    </a>
+    <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت
+    </a>
+    <form method="post" action="{% url 'transaction_delete' tx.pk %}" class="m-0 d-inline" onsubmit="return confirm('این تراکنش حذف شود؟');">
+        {% csrf_token %}
+        <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> حذف</button>
+    </form>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-info-circle"></i> اطلاعات تراکنش</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <th class="text-muted" style="width: 30%;">نوع</th>
+                        <td>
+                            {% if tx.transaction_type == "income" %}
+                                <span class="badge bg-success">درآمد</span>
+                            {% else %}
+                                <span class="badge bg-danger">هزینه</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr><th class="text-muted">دسته‌بندی</th><td>{{ tx.get_category_display }}</td></tr>
+                    <tr>
+                        <th class="text-muted">مبلغ</th>
+                        <td class="fw-bold fs-5 {% if tx.transaction_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                            {% if tx.transaction_type == 'income' %}+{% else %}-{% endif %}{{ tx.amount|floatformat:0 }} تومان
+                        </td>
+                    </tr>
+                    <tr><th class="text-muted">تاریخ</th><td>{{ tx.transaction_date|jalali_full }}</td></tr>
+                    <tr><th class="text-muted">ثبت‌کننده</th><td>{{ tx.created_by.get_full_name }}</td></tr>
+                    <tr><th class="text-muted">تاریخ ثبت</th><td>{{ tx.created_at|jalali_datetime }}</td></tr>
+                    {% if tx.description %}
+                        <tr><th class="text-muted">توضیحات</th><td>{{ tx.description|linebreaksbr }}</td></tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        {% if tx.patient %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> بیمار</h6>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="user-avatar" style="width: 48px; height: 48px; font-size: 1.2rem;">
+                        {{ tx.patient.first_name|first }}
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ tx.patient.full_name }}</div>
+                        <div class="small text-muted">پرونده: {{ tx.patient.file_number }}</div>
+                    </div>
+                </div>
+                <a href="{% url 'patient_detail' tx.patient.pk %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
+                    <i class="bi bi-folder2-open"></i> مشاهده پرونده
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if tx.visit %}
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-clipboard-pulse"></i> مراجعه مرتبط</h6>
+                <div class="small">
+                    <b class="text-muted">تاریخ:</b> {{ tx.visit.visited_at|jalali_datetime }}<br>
+                    {% if tx.visit.diagnosis %}<b class="text-muted">تشخیص:</b> {{ tx.visit.diagnosis }}{% endif %}
+                </div>
+                <a href="{% url 'visit_detail' tx.visit.pk %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
+                    <i class="bi bi-eye"></i> مشاهده مراجعه
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}نمای روزانه{% endblock %}
+{% block header %}<i class="bi bi-calendar-day-fill"></i> نمای روزانه{% endblock %}
+{% block subtitle %}<div class="page-subtitle">{{ jdate.year }}/{{ jdate.month }}/{{ jdate.day }} — {{ physician.get_full_name|default:"—" }}</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary">
+        <i class="bi bi-calendar-plus-fill"></i> نوبت جدید
+    </a>
+    <a href="{% url 'appointment_week' %}?date={{ target_date|date:'Y-m-d' }}" class="btn btn-outline-secondary">
+        <i class="bi bi-calendar-week"></i> نمای هفتگی
+    </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- نوار پیمایش -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex gap-2">
+                <a href="?date={{ prev_day|date:'Y-m-d' }}{% if physician %}&physician={{ physician.pk }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-chevron-right"></i> روز قبل
+                </a>
+                <a href="?date={{ today|date:'Y-m-d' }}{% if physician %}&physician={{ physician.pk }}{% endif %}" class="btn btn-sm btn-primary">امروز</a>
+                <a href="?date={{ next_day|date:'Y-m-d' }}{% if physician %}&physician={{ physician.pk }}{% endif %}" class="btn btn-sm btn-outline-secondary">
+                    روز بعد <i class="bi bi-chevron-left"></i>
+                </a>
+            </div>
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="date" value="{{ target_date|date:'Y-m-d' }}">
+                <select name="physician" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for p in physicians %}
+                        <option value="{{ p.pk }}" {% if physician.pk == p.pk %}selected{% endif %}>
+                            {{ p.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if not physician %}
+    <div class="card"><div class="card-body text-center py-5">
+        <i class="bi bi-person-x" style="font-size: 3rem; color: #cbd5e1;"></i>
+        <h5 class="mt-3">هیچ پزشکی انتخاب نشده</h5>
+    </div></div>
+{% elif not slots %}
+    <div class="card"><div class="card-body text-center py-5">
+        <i class="bi bi-calendar-x" style="font-size: 3rem; color: #cbd5e1;"></i>
+        <h5 class="mt-3">برنامه‌ای برای این روز ثبت نشده</h5>
+        <p class="text-muted small">لطفاً برنامه‌ی هفتگی پزشک را در بخش «برنامه هفتگی» تنظیم کنید.</p>
+        <a href="{% url 'schedule_list' %}" class="btn btn-outline-primary">
+            <i class="bi bi-clock"></i> تنظیم برنامه هفتگی
+        </a>
+    </div></div>
+{% else %}
+    <div class="row g-2">
+        {% for s in slots %}
+            <div class="col-md-3 col-lg-2">
+                {% if s.status == "available" %}
+                    <a href="{% url 'appointment_create' %}?date={{ target_date|date:'Y-m-d' }}&start={{ s.start|time:'H:i' }}&end={{ s.end|time:'H:i' }}&physician={{ physician.pk }}"
+                       class="d-block text-decoration-none">
+                        <div class="card text-center" style="border: 1.5px dashed #10b981; background: rgba(16, 185, 129, 0.04); transition: all .2s;"
+                             onmouseover="this.style.background='rgba(16, 185, 129, 0.12)'"
+                             onmouseout="this.style.background='rgba(16, 185, 129, 0.04)'">
+                            <div class="card-body p-2">
+                                <i class="bi bi-plus-circle" style="font-size: 1.5rem; color: #10b981;"></i>
+                                <div class="fw-bold mt-1" style="direction: ltr; color: #059669;">{{ s.start|time:"H:i" }}</div>
+                                <div class="small" style="color: #64748b;">خالی</div>
+                            </div>
+                        </div>
+                    </a>
+                {% elif s.status == "taken" %}
+                    <a href="{% url 'appointment_detail' s.appointment.pk %}" class="d-block text-decoration-none">
+                        <div class="card text-center" style="border: 1.5px solid #2563eb; background: rgba(37, 99, 235, 0.06);">
+                            <div class="card-body p-2">
+                                <i class="bi bi-person-fill" style="font-size: 1.5rem; color: #2563eb;"></i>
+                                <div class="fw-bold mt-1" style="direction: ltr; color: #1e40af;">{{ s.start|time:"H:i" }}</div>
+                                <div class="small fw-bold" style="color: #0f172a;">{{ s.appointment.patient.full_name|truncatechars:15 }}</div>
+                            </div>
+                        </div>
+                    </a>
+                {% else %}
+                    <div class="card text-center" style="background: #f1f5f9; opacity: .6;">
+                        <div class="card-body p-2">
+                            <i class="bi bi-slash-circle" style="font-size: 1.5rem; color: #94a3b8;"></i>
+                            <div class="fw-bold mt-1" style="direction: ltr; color: #64748b;">{{ s.start|time:"H:i" }}</div>
+                            <div class="small" style="color: #94a3b8;">غیرفعال</div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

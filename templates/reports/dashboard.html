@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}گزارش‌های مدیریتی{% endblock %}
+{% block header %}<i class="bi bi-graph-up-arrow"></i> گزارش‌های مدیریتی{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    از {{ j_from.year }}/{{ j_from.month }}/{{ j_from.day }}
+    تا {{ j_to.year }}/{{ j_to.month }}/{{ j_to.day }}
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'reports_export_csv' %}?period={{ period }}&from={{ date_from_s }}&to={{ date_to_s }}"
+       class="btn btn-outline-success">
+        <i class="bi bi-file-earmark-excel-fill"></i> خروجی Excel
+    </a>
+    <button onclick="window.print()" class="btn btn-outline-secondary">
+        <i class="bi bi-printer-fill"></i> چاپ گزارش
+    </button>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        .sidebar, .mobile-topbar, .desktop-topbar, .topbar_actions, .filter-card { display: none !important; }
+        .main-wrapper { margin-right: 0 !important; }
+        .card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; page-break-inside: avoid; }
+        body { background: #fff !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- فیلتر بازه -->
+<div class="card mb-3 filter-card">
+    <div class="card-body">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small">بازه</label>
+                <select name="period" class="form-select" onchange="this.form.submit()">
+                    <option value="today" {% if period == 'today' %}selected{% endif %}>امروز</option>
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>۷ روز اخیر</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>این ماه (شمسی)</option>
+                    <option value="year" {% if period == 'year' %}selected{% endif %}>این سال (شمسی)</option>
+                    <option value="custom" {% if period == 'custom' %}selected{% endif %}>سفارشی</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">از تاریخ</label>
+                <input type="date" name="from" value="{{ date_from_s }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small">تا تاریخ</label>
+                <input type="date" name="to" value="{{ date_to_s }}" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100">
+                    <i class="bi bi-funnel-fill"></i> اعمال فیلتر
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- کارت‌های آماری اصلی -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-people-fill"></i></div>
+            <div class="stat-label">بیماران جدید</div>
+            <div class="stat-value">{{ stats.new_patients }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-clipboard2-pulse-fill"></i></div>
+            <div class="stat-label">کل مراجعات</div>
+            <div class="stat-value">{{ stats.total_visits }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-cash-coin"></i></div>
+            <div class="stat-label">درآمد (تومان)</div>
+            <div class="stat-value" style="font-size: 1.4rem;">{{ stats.income|floatformat:0 }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: rgba(239,68,68,.1); color: #ef4444;"><i class="bi bi-arrow-up-circle-fill"></i></div>
+            <div class="stat-label">هزینه (تومان)</div>
+            <div class="stat-value" style="font-size: 1.4rem;">{{ stats.expense|floatformat:0 }}</div>
+        </div>
+    </div>
+</div>
+
+<!-- کارت‌های آماری فرعی -->
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">مانده</div>
+                <div class="fs-5 fw-bold" style="color: {% if stats.balance >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+                    {{ stats.balance|floatformat:0 }} تومان
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">درمان‌های ثبت‌شده</div>
+                <div class="fs-5 fw-bold">{{ stats.manual_count|add:stats.reflex_count|add:stats.discopathy_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">مدارک و رضایت‌نامه</div>
+                <div class="fs-5 fw-bold">{{ stats.docs_count|add:stats.consents_count }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">کالاهای کم‌موجود</div>
+                <div class="fs-5 fw-bold {% if stats.low_stock > 0 %}text-warning{% endif %}">{{ stats.low_stock }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نمودار مراجعات -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-bar-chart-fill"></i> نمودار مراجعات</h6>
+                <canvas id="visitsChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-graph-up"></i> نمودار درآمد و هزینه</h6>
+                <canvas id="financeChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- جزئیات: دسته‌بندی درآمد و هزینه -->
+<div class="row g-3 mb-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-success mb-3"><i class="bi bi-arrow-down-circle-fill"></i> درآمد به تفکیک دسته</h6>
+                {% if income_cats %}
+                    <table class="table table-sm">
+                        <thead><tr><th>دسته</th><th>تعداد</th><th>جمع (تومان)</th></tr></thead>
+                        <tbody>
+                        {% for row in income_cats %}
+                            <tr>
+                                <td>{{ row.category }}</td>
+                                <td>{{ row.count }}</td>
+                                <td class="fw-bold">{{ row.total|floatformat:0 }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-muted text-center py-3 small">داده‌ای در این بازه وجود ندارد.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-danger mb-3"><i class="bi bi-arrow-up-circle-fill"></i> هزینه به تفکیک دسته</h6>
+                {% if expense_cats %}
+                    <table class="table table-sm">
+                        <thead><tr><th>دسته</th><th>تعداد</th><th>جمع (تومان)</th></tr></thead>
+                        <tbody>
+                        {% for row in expense_cats %}
+                            <tr>
+                                <td>{{ row.category }}</td>
+                                <td>{{ row.count }}</td>
+                                <td class="fw-bold">{{ row.total|floatformat:0 }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-muted text-center py-3 small">داده‌ای در این بازه وجود ندارد.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top بیماران و Top داروها -->
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-trophy-fill"></i> بیماران با بیشترین مراجعه</h6>
+                {% if top_patients %}
+                    <table class="table table-sm">
+                        <thead><tr><th>#</th><th>بیمار</th><th>پرونده</th><th>تعداد مراجعه</th></tr></thead>
+                        <tbody>
+                        {% for p in top_patients %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ p.patient__first_name }} {{ p.patient__last_name }}</td>
+                                <td><span class="badge bg-light text-dark">{{ p.patient__file_number }}</span></td>
+                                <td><strong>{{ p.visit_count }}</strong></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-muted text-center py-3 small">مراجعه‌ای ثبت نشده.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-capsule"></i> پرمصرف‌ترین داروها</h6>
+                {% if top_medicines %}
+                    <table class="table table-sm">
+                        <thead><tr><th>#</th><th>دارو</th><th>تعداد تجویز</th></tr></thead>
+                        <tbody>
+                        {% for m in top_medicines %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>{{ m.medicine__name }}</td>
+                                <td><strong>{{ m.prescription_count }}</strong></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-muted text-center py-3 small">نسخه‌ای ثبت نشده.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// نمودار مراجعات
+var visitsCtx = document.getElementById('visitsChart').getContext('2d');
+new Chart(visitsCtx, {
+    type: 'line',
+    data: {
+        labels: {{ visits_chart.labels|safe }},
+        datasets: [{
+            label: 'مراجعات',
+            data: {{ visits_chart.data_1|safe }},
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.12)',
+            tension: 0.35,
+            fill: true,
+            borderWidth: 2.5,
+            pointRadius: 3,
+            pointBackgroundColor: '#2563eb',
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: { titleFont: { family: 'Vazirmatn' }, bodyFont: { family: 'Vazirmatn' } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Vazirmatn' } }, grid: { color: '#f1f5f9' } },
+            x: { ticks: { font: { family: 'Vazirmatn', size: 10 } }, grid: { display: false } }
+        }
+    }
+});
+
+// نمودار درآمد و هزینه
+var financeCtx = document.getElementById('financeChart').getContext('2d');
+new Chart(financeCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ finance_chart.labels|safe }},
+        datasets: [
+            {
+                label: 'درآمد',
+                data: {{ finance_chart.data_1|safe }},
+                backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                borderRadius: 6,
+            },
+            {
+                label: 'هزینه',
+                data: {{ finance_chart.data_2|safe }},
+                backgroundColor: 'rgba(239, 68, 68, 0.75)',
+                borderRadius: 6,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Vazirmatn' } } },
+            tooltip: { titleFont: { family: 'Vazirmatn' }, bodyFont: { family: 'Vazirmatn' } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { font: { family: 'Vazirmatn' }, callback: function(v) { return v.toLocaleString('fa-IR'); } }, grid: { color: '#f1f5f9' } },
+            x: { ticks: { font: { family: 'Vazirmatn', size: 10 } }, grid: { display: false } }
+        }
+    }
+});
+</script>
+{% endblock %}

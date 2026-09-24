@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block header %}<i class="bi bi-shield-lock"></i> {{ title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مالک لایسنس</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">صادر شده برای</label>
+                    {{ form.licensed_to }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">ایمیل</label>
+                    {{ form.licensed_email }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">تلفن</label>
+                    {{ form.licensed_phone }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-award"></i> نوع و اعتبار</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نوع لایسنس</label>
+                    {{ form.tier }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">شروع اعتبار</label>
+                    {{ form.valid_from }}
+                    <div class="text-muted small">فرمت: YYYY-MM-DD</div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">پایان اعتبار</label>
+                    {{ form.valid_until }}
+                    <div class="text-muted small">فرمت: YYYY-MM-DD</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-sliders"></i> محدودیت‌ها</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.max_users.label }}</label>
+                    {{ form.max_users }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.max_physicians.label }}</label>
+                    {{ form.max_physicians }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.max_branches.label }}</label>
+                    {{ form.max_branches }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-toggles"></i> ماژول‌های فعال</h6>
+            <div class="row g-3">
+                <div class="col-md-4"><div class="form-check">{{ form.enable_inventory }}<label class="form-check-label ms-2">انبار</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_finance }}<label class="form-check-label ms-2">مالی</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_therapies }}<label class="form-check-label ms-2">درمان‌های تخصصی</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_documents }}<label class="form-check-label ms-2">مدارک</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_consent }}<label class="form-check-label ms-2">رضایت‌نامه</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_reports }}<label class="form-check-label ms-2">گزارش‌ها</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_backup }}<label class="form-check-label ms-2">پشتیبان‌گیری</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_audit }}<label class="form-check-label ms-2">گزارش فعالیت‌ها</label></div></div>
+                <div class="col-md-4"><div class="form-check">{{ form.enable_appointments }}<label class="form-check-label ms-2">نوبت‌دهی</label></div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نسخه نرم‌افزار</label>
+                    {{ form.version }}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">یادداشت</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> ذخیره</button>
+        <a href="{% url 'license_dashboard' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> انصراف</a>
+    </div>
+</form>
+{% endblock %}

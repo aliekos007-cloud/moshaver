@@ -1,0 +1,7 @@
+Django>=5.2,<7.0
+Pillow
+jdatetime
+python-decouple
+whitenoise
+psycopg[binary]>=3.1.0
+gunicorn==22.0.0

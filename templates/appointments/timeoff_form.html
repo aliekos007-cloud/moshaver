@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block header %}<i class="bi bi-calendar-x"></i> {{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<style>.datepicker-plot-area { font-family: Vazirmatn, tahoma, sans-serif !important; z-index: 9999 !important; }</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger">{% for e in form.non_field_errors %}{{ e }}<br>{% endfor %}</div>
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.physician.label }} <span class="required-star">*</span></label>
+                    {{ form.physician }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.date.label }} <span class="required-star">*</span></label>
+                    <input type="text" id="date_display" class="form-control" placeholder="۱۴۰۵/۰۷/۰۱" readonly style="cursor: pointer;">
+                    {{ form.date }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.reason.label }}</label>
+                    {{ form.reason }}
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check mt-4">
+                        {{ form.all_day }}
+                        <label class="form-check-label">تمام روز</label>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.start_time.label }}</label>
+                    {{ form.start_time }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.end_time.label }}</label>
+                    {{ form.end_time }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">{{ form.note.label }}</label>
+                    {{ form.note }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary"><i class="bi bi-check-circle"></i> ذخیره</button>
+        <a href="{% url 'timeoff_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-circle"></i> انصراف</a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    var hidden = $("#id_time_off_date");
+    var display = $("#date_display");
+
+    if (!hidden.val()) {
+        var now = new Date();
+        var localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        hidden.val(localDate.toISOString().split('T')[0]);
+        display.val(new persianDate(now).format('YYYY/MM/DD'));
+    } else {
+        var g = new Date(hidden.val());
+        if (!isNaN(g.getTime())) display.val(new persianDate(g).format('YYYY/MM/DD'));
+    }
+
+    display.persianDatepicker({
+        format: 'YYYY/MM/DD',
+        altField: '#id_time_off_date',
+        altFormat: 'YYYY-MM-DD',
+        autoClose: true, initialValue: false, observer: true, persianDigit: true,
+        toolbox: { calendarSwitch: { enabled: false } },
+        navigator: { scroll: { enabled: false } }
+    });
+});
+</script>
+{% endblock %}

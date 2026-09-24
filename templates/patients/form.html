@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — طبیب{% endblock %}
+{% block header %}<i class="bi bi-person-vcard"></i> {{ title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<style>
+    .datepicker-plot-area {
+        font-family: Vazirmatn, tahoma, sans-serif !important;
+        z-index: 9999 !important;
+    }
+    .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.errors %}
+    <div class="alert alert-danger" style="border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        لطفاً خطاهای زیر را اصلاح کنید.
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مشخصات هویتی</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ form.first_name.label }}
+                        {% if form.first_name.field.required %}<span class="required-star">*</span>{% endif %}
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ form.last_name.label }}
+                        {% if form.last_name.field.required %}<span class="required-star">*</span>{% endif %}
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.father_name.label }}</label>
+                    {{ form.father_name }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ form.national_code.label }}
+                        {% if form.national_code.field.required %}<span class="required-star">*</span>{% endif %}
+                    </label>
+                    {{ form.national_code }}
+                    {% if form.national_code.errors %}<div class="text-danger small mt-1">{{ form.national_code.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ form.gender.label }}
+                        {% if form.gender.field.required %}<span class="required-star">*</span>{% endif %}
+                    </label>
+                    {{ form.gender }}
+                    {% if form.gender.errors %}<div class="text-danger small mt-1">{{ form.gender.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.birth_date.label }}</label>
+                    <input type="text" id="birth_date_display" class="form-control"
+                           placeholder="مثال: ۱۳۷۰/۰۵/۱۲" readonly autocomplete="off"
+                           style="cursor: pointer; background: #fff;">
+                    {{ form.birth_date }}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.marital_status.label }}</label>
+                    {{ form.marital_status }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.job.label }}</label>
+                    {{ form.job }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.education.label }}</label>
+                    {{ form.education }}
+                </div>
+
+                <div class="col-md-4">
+                    <div class="form-check mt-4">
+                        {{ form.is_foreign }}
+                        <label class="form-check-label" for="{{ form.is_foreign.id_for_label }}">{{ form.is_foreign.label }}</label>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">{{ form.foreign_id.label }}</label>
+                    {{ form.foreign_id }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-telephone"></i> اطلاعات تماس</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">
+                        {{ form.mobile.label }}
+                        {% if form.mobile.field.required %}<span class="required-star">*</span>{% endif %}
+                    </label>
+                    {{ form.mobile }}
+                    {% if form.mobile.errors %}<div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.phone.label }}</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.emergency_name.label }}</label>
+                    {{ form.emergency_name }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.emergency_phone.label }}</label>
+                    {{ form.emergency_phone }}
+                    {% if form.emergency_phone.errors %}<div class="text-danger small mt-1">{{ form.emergency_phone.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-geo-alt"></i> آدرس</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.country.label }}</label>
+                    {{ form.country }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.province.label }}</label>
+                    {{ form.province }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.city.label }}</label>
+                    {{ form.city }}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.street.label }}</label>
+                    {{ form.street }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.alley.label }}</label>
+                    {{ form.alley }}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.plaque.label }}</label>
+                    {{ form.plaque }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.postal_code.label }}</label>
+                    {{ form.postal_code }}
+                    {% if form.postal_code.errors %}<div class="text-danger small mt-1">{{ form.postal_code.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">{{ form.address_note.label }}</label>
+                    {{ form.address_note }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> ذخیره
+        </button>
+        <a href="{% url 'patient_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> انصراف
+        </a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    var hiddenField = $("#id_birth_date_gregorian");
+    var displayField = $("#birth_date_display");
+
+    displayField.persianDatepicker({
+        format: 'YYYY/MM/DD',
+        altField: '#id_birth_date_gregorian',
+        altFormat: 'YYYY-MM-DD',
+        autoClose: true,
+        initialValue: false,
+        observer: true,
+        persianDigit: true,
+        toolbox: { calendarSwitch: { enabled: false } },
+        navigator: { scroll: { enabled: false } }
+    });
+
+    var gregorianValue = hiddenField.val();
+    if (gregorianValue) {
+        try {
+            var gDate = new Date(gregorianValue);
+            if (!isNaN(gDate.getTime())) {
+                var pDate = new persianDate(gDate);
+                displayField.val(pDate.format('YYYY/MM/DD'));
+            }
+        } catch (e) {
+            console.error("خطا در تبدیل تاریخ:", e);
+        }
+    }
+});
+</script>
+{% endblock %}

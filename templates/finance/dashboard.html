@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}مالی — طبیب{% endblock %}
+{% block header %}<i class="bi bi-cash-coin"></i> داشبورد مالی{% endblock %}
+{% block subtitle %}<div class="page-subtitle">نمای کلی درآمد، هزینه و صندوق مطب</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'transaction_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle-fill"></i> تراکنش جدید
+    </a>
+    <a href="{% url 'transaction_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-list-ul"></i> لیست تراکنش‌ها
+    </a>
+{% endblock %}
+
+{% block content %}
+<!-- ===== کارت‌های ماه ===== -->
+<div class="row g-4 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-arrow-down-circle-fill"></i></div>
+            <div class="stat-label">درآمد این ماه</div>
+            <div class="stat-value">{{ month_stats.income|floatformat:0 }} <span style="font-size: .7rem; color: #64748b;">تومان</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon orange"><i class="bi bi-arrow-up-circle-fill"></i></div>
+            <div class="stat-label">هزینه این ماه</div>
+            <div class="stat-value">{{ month_stats.expense|floatformat:0 }} <span style="font-size: .7rem; color: #64748b;">تومان</span></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="bi bi-wallet2"></i></div>
+            <div class="stat-label">مانده این ماه</div>
+            <div class="stat-value" style="color: {% if month_stats.balance >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+                {{ month_stats.balance|floatformat:0 }} <span style="font-size: .7rem; color: #64748b;">تومان</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== کارت‌های امروز ===== -->
+<div class="row g-4 mb-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">درآمد امروز</div>
+                        <div class="fs-5 fw-bold text-success">{{ today_stats.income|floatformat:0 }}</div>
+                    </div>
+                    <i class="bi bi-sun-fill" style="font-size: 1.8rem; color: #f59e0b;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">هزینه امروز</div>
+                        <div class="fs-5 fw-bold text-danger">{{ today_stats.expense|floatformat:0 }}</div>
+                    </div>
+                    <i class="bi bi-graph-down" style="font-size: 1.8rem; color: #ef4444;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-muted small">تعداد تراکنش امروز</div>
+                        <div class="fs-5 fw-bold">{{ today_stats.count }}</div>
+                    </div>
+                    <i class="bi bi-receipt" style="font-size: 1.8rem; color: #2563eb;"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== نمودار ۷ روز اخیر ===== -->
+<div class="card mb-3">
+    <div class="card-body">
+        <h6 class="text-primary mb-3"><i class="bi bi-bar-chart-fill"></i> روند ۷ روز اخیر</h6>
+        <canvas id="financeChart" height="80"></canvas>
+    </div>
+</div>
+
+<!-- ===== آخرین تراکنش‌ها ===== -->
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h6 class="text-primary mb-0"><i class="bi bi-clock-history"></i> آخرین تراکنش‌ها</h6>
+            <a href="{% url 'transaction_list' %}" class="btn btn-sm btn-outline-primary">مشاهده همه</a>
+        </div>
+
+        {% if recent %}
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>شماره رسید</th>
+                    <th>تاریخ</th>
+                    <th>نوع</th>
+                    <th>دسته</th>
+                    <th>مبلغ</th>
+                    <th>بیمار</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for t in recent %}
+                    <tr>
+                        <td><span class="badge bg-light text-dark" style="direction: ltr;">{{ t.receipt_number }}</span></td>
+                        <td>{{ t.transaction_date|jalali }}</td>
+                        <td>
+                            {% if t.transaction_type == "income" %}
+                                <span class="badge bg-success">درآمد</span>
+                            {% else %}
+                                <span class="badge bg-danger">هزینه</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ t.get_category_display }}</td>
+                        <td class="fw-bold {% if t.transaction_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                            {% if t.transaction_type == 'income' %}+{% else %}-{% endif %}{{ t.amount|floatformat:0 }}
+                        </td>
+                        <td>{{ t.patient.full_name|default:"—" }}</td>
+                        <td>
+                            <a href="{% url 'transaction_detail' t.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-receipt"></i>
+                هنوز تراکنشی ثبت نشده است.
+                <div class="mt-3">
+                    <a href="{% url 'transaction_create' %}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-plus-circle"></i> ثبت اولین تراکنش
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+var ctx = document.getElementById('financeChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_days|safe }},
+        datasets: [
+            {
+                label: 'درآمد',
+                data: {{ chart_income|safe }},
+                backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                borderRadius: 6,
+            },
+            {
+                label: 'هزینه',
+                data: {{ chart_expense|safe }},
+                backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                borderRadius: 6,
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'top', labels: { font: { family: 'Vazirmatn' } } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { font: { family: 'Vazirmatn' } } },
+            x: { ticks: { font: { family: 'Vazirmatn' } } }
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}جزئیات نوبت — {{ appointment.patient.full_name }}{% endblock %}
+{% block header %}<i class="bi bi-calendar-check-fill"></i> جزئیات نوبت{% endblock %}
+
+{% block topbar_actions %}
+    {% if not appointment.visit and appointment.status != "cancelled" %}
+    <a href="{% url 'appointment_convert_to_visit' appointment.pk %}" class="btn btn-success">
+        <i class="bi bi-clipboard-pulse"></i> شروع ویزیت
+    </a>
+    {% endif %}
+    <a href="{% url 'appointment_edit' appointment.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil"></i> ویرایش
+    </a>
+    <a href="{% url 'secretary_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-info-circle"></i> اطلاعات نوبت</h6>
+                <table class="table table-sm">
+                    <tr><th class="text-muted" style="width: 35%;">بیمار</th>
+                        <td><strong>{{ appointment.patient.full_name }}</strong></td></tr>
+                    <tr><th class="text-muted">شماره پرونده</th>
+                        <td><span class="badge bg-light text-dark">{{ appointment.patient.file_number }}</span></td></tr>
+                    <tr><th class="text-muted">موبایل</th>
+                        <td><a href="tel:{{ appointment.patient.mobile }}">{{ appointment.patient.mobile }}</a></td></tr>
+                    <tr><th class="text-muted">طبیب</th>
+                        <td>{{ appointment.physician.get_full_name }}</td></tr>
+                    <tr><th class="text-muted">تاریخ</th>
+                        <td><strong>{{ appointment.date|jalali_full }}</strong></td></tr>
+                    <tr><th class="text-muted">ساعت</th>
+                        <td><strong style="direction: ltr; display: inline-block;">{{ appointment.start_time|time:"H:i" }} — {{ appointment.end_time|time:"H:i" }}</strong></td></tr>
+                    <tr><th class="text-muted">وضعیت</th>
+                        <td><span class="badge {{ appointment.status_badge.0 }}">{{ appointment.status_badge.1 }}</span></td></tr>
+                    <tr><th class="text-muted">منبع</th><td>{{ appointment.get_source_display }}</td></tr>
+                    {% if appointment.reason %}
+                    <tr><th class="text-muted">علت مراجعه</th><td>{{ appointment.reason|linebreaksbr }}</td></tr>
+                    {% endif %}
+                    {% if appointment.note %}
+                    <tr><th class="text-muted">یادداشت</th><td>{{ appointment.note|linebreaksbr }}</td></tr>
+                    {% endif %}
+                    <tr><th class="text-muted">ثبت‌کننده</th>
+                        <td>{{ appointment.created_by.get_full_name|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">تاریخ ثبت</th>
+                        <td>{{ appointment.created_at|jalali_datetime }}</td></tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <!-- تغییر وضعیت -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-arrow-repeat"></i> تغییر وضعیت</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for key, label in appointment.STATUS %}
+                        {% if key != appointment.status %}
+                        <form method="post" action="{% url 'appointment_change_status' appointment.pk %}" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="status" value="{{ key }}">
+                            <button class="btn btn-sm btn-outline-primary">{{ label }}</button>
+                        </form>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- بیمار -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> بیمار</h6>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="user-avatar" style="width: 48px; height: 48px; font-size: 1.2rem;">
+                        {{ appointment.patient.first_name|first }}
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ appointment.patient.full_name }}</div>
+                        <div class="small text-muted">{{ appointment.patient.mobile }}</div>
+                    </div>
+                </div>
+                <a href="{% url 'patient_detail' appointment.patient.pk %}" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="bi bi-folder2-open"></i> مشاهده پرونده
+                </a>
+            </div>
+        </div>
+
+        {% if appointment.visit %}
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-clipboard-pulse"></i> ویزیت مرتبط</h6>
+                <div class="small text-muted mb-2">{{ appointment.visit.visited_at|jalali_datetime }}</div>
+                <a href="{% url 'visit_detail' appointment.visit.pk %}" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="bi bi-eye"></i> مشاهده ویزیت
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

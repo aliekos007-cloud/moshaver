@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} — طبیب{% endblock %}
+{% block header %}<i class="bi bi-person-plus-fill"></i> {{ title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.non_field_errors %}
+        <div class="alert alert-danger" style="border-radius: 12px;">
+            {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
+        </div>
+    {% endif %}
+
+    {% if is_self %}
+        <div class="alert alert-info" style="border-radius: 12px;">
+            <i class="bi bi-info-circle-fill"></i>
+            شما در حال ویرایش حساب خودتان هستید — نقش و وضعیت فعال قابل تغییر نیست.
+        </div>
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-person-lines-fill"></i> اطلاعات کاربر</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">نام <span class="required-star">*</span></label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نام خانوادگی <span class="required-star">*</span></label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">کد ملی <span class="required-star">*</span></label>
+                    {{ form.national_code }}
+                    {% if form.national_code.errors %}<div class="text-danger small mt-1">{{ form.national_code.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">تلفن همراه</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">نقش <span class="required-star">*</span></label>
+                    {{ form.role }}
+                    {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check">
+                        {{ form.is_active }}
+                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">حساب فعال باشد</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if form.password %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-shield-lock"></i> رمز عبور</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">رمز عبور <span class="required-star">*</span></label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}<div class="text-muted small mt-1">{{ form.password.help_text }}</div>{% endif %}
+                        {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">تکرار رمز عبور <span class="required-star">*</span></label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}<div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> ذخیره
+        </button>
+        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> انصراف
+        </a>
+    </div>
+</form>
+{% endblock %}

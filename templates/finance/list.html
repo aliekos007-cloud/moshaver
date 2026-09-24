@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}تراکنش‌ها — طبیب{% endblock %}
+{% block header %}<i class="bi bi-list-ul"></i> لیست تراکنش‌ها{% endblock %}
+{% block subtitle %}<div class="page-subtitle">جست‌وجو و فیلتر تمام تراکنش‌های مالی مطب</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'transaction_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle-fill"></i> تراکنش جدید
+    </a>
+    <a href="{% url 'finance_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-speedometer2"></i> داشبورد
+    </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- خلاصه‌ی فیلتر -->
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">جمع درآمد نمایش‌داده‌شده</div>
+                <div class="fs-5 fw-bold text-success">{{ stats.income|floatformat:0 }} تومان</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">جمع هزینه نمایش‌داده‌شده</div>
+                <div class="fs-5 fw-bold text-danger">{{ stats.expense|floatformat:0 }} تومان</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body py-3">
+                <div class="text-muted small">مانده</div>
+                <div class="fs-5 fw-bold" style="color: {% if stats.balance >= 0 %}#10b981{% else %}#ef4444{% endif %};">
+                    {{ stats.balance|floatformat:0 }} تومان
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- فیلترها -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جست‌وجو...">
+            </div>
+            <div class="col-md-2">
+                <select name="type" class="form-select">
+                    <option value="">همه انواع</option>
+                    <option value="income" {% if type_filter == 'income' %}selected{% endif %}>درآمد</option>
+                    <option value="expense" {% if type_filter == 'expense' %}selected{% endif %}>هزینه</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="category" class="form-select">
+                    <option value="">همه دسته‌ها</option>
+                    {% for key, label in categories %}
+                        <option value="{{ key }}" {% if category_filter == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="from" value="{{ from_filter }}" class="form-control" placeholder="از تاریخ">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="to" value="{{ to_filter }}" class="form-control" placeholder="تا تاریخ">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- جدول -->
+<div class="card">
+    <table class="table">
+        <thead>
+        <tr>
+            <th>شماره رسید</th>
+            <th>تاریخ</th>
+            <th>نوع</th>
+            <th>دسته</th>
+            <th>مبلغ (تومان)</th>
+            <th>بیمار</th>
+            <th>ثبت‌کننده</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for t in transactions %}
+            <tr>
+                <td><span class="badge bg-light text-dark" style="direction: ltr;">{{ t.receipt_number }}</span></td>
+                <td>{{ t.transaction_date|jalali }}</td>
+                <td>
+                    {% if t.transaction_type == "income" %}
+                        <span class="badge bg-success">درآمد</span>
+                    {% else %}
+                        <span class="badge bg-danger">هزینه</span>
+                    {% endif %}
+                </td>
+                <td>{{ t.get_category_display }}</td>
+                <td class="fw-bold {% if t.transaction_type == 'income' %}text-success{% else %}text-danger{% endif %}">
+                    {{ t.amount|floatformat:0 }}
+                </td>
+                <td>{{ t.patient.full_name|default:"—" }}</td>
+                <td class="text-muted small">{{ t.created_by.get_full_name }}</td>
+                <td class="text-end">
+                    <a href="{% url 'transaction_detail' t.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="{% url 'receipt_print' t.pk %}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-printer"></i>
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        هیچ تراکنشی با این فیلترها پیدا نشد.
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

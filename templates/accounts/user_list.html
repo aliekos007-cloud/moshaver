@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}مدیریت کاربران — طبیب{% endblock %}
+{% block header %}<i class="bi bi-person-badge-fill"></i> مدیریت کاربران{% endblock %}
+{% block subtitle %}<div class="page-subtitle">کاربران سامانه و سطح دسترسی آن‌ها</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'user_create' %}" class="btn btn-primary">
+        <i class="bi bi-person-plus-fill"></i> کاربر جدید
+    </a>
+{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <table class="table table-responsive-stack">
+        <thead>
+        <tr>
+            <th>نام</th>
+            <th>کد ملی</th>
+            <th>نقش</th>
+            <th>تلفن</th>
+            <th>وضعیت</th>
+            <th>آخرین ورود</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+            <tr>
+                <td data-label="نام">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="user-avatar" style="width: 34px; height: 34px; font-size: .85rem; background: linear-gradient(135deg, #06b6d4, #2563eb);">
+                            {{ u.first_name|first|default:"U" }}
+                        </div>
+                        <div>
+                            <div class="fw-bold" style="font-size: .85rem;">{{ u.get_full_name|default:"—" }}</div>
+                            {% if u == request.user %}
+                                <span class="badge bg-info text-dark" style="font-size: .65rem;">خودتان</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </td>
+                <td data-label="کد ملی">{{ u.national_code }}</td>
+                <td data-label="نقش">
+                    {% if u.role == "manager" %}
+                        <span class="badge bg-primary">مدیر مطب</span>
+                    {% elif u.role == "physician" %}
+                        <span class="badge bg-success">طبیب</span>
+                    {% elif u.role == "secretary" %}
+                        <span class="badge bg-warning text-dark">منشی</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ u.get_role_display }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="تلفن">{{ u.phone|default:"—" }}</td>
+                <td data-label="وضعیت">
+                    {% if u.is_active %}
+                        <span class="badge bg-success">فعال</span>
+                    {% else %}
+                        <span class="badge bg-secondary">غیرفعال</span>
+                    {% endif %}
+                </td>
+                <td data-label="آخرین ورود">
+                    {% if u.last_login %}
+                        <span class="small text-muted">{{ u.last_login|jalali_datetime }}</span>
+                    {% else %}
+                        <span class="small text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="d-flex gap-1">
+                        <a href="{% url 'user_edit' u.pk %}" class="btn btn-sm btn-outline-primary" title="ویرایش">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'user_change_password' u.pk %}" class="btn btn-sm btn-outline-secondary" title="تغییر رمز">
+                            <i class="bi bi-key"></i>
+                        </a>
+                        {% if u != request.user %}
+                            <form method="post" action="{% url 'user_toggle_active' u.pk %}" class="m-0" onsubmit="return confirm('وضعیت این کاربر تغییر کند؟');">
+                                {% csrf_token %}
+                                {% if u.is_active %}
+                                    <button class="btn btn-sm btn-outline-danger" title="غیرفعال کردن">
+                                        <i class="bi bi-lock"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-success" title="فعال کردن">
+                                        <i class="bi bi-unlock"></i>
+                                    </button>
+                                {% endif %}
+                            </form>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <i class="bi bi-people"></i>
+                        هنوز کاربری ثبت نشده است.
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}برنامه هفتگی{% endblock %}
+{% block header %}<i class="bi bi-clock-fill"></i> برنامه هفتگی پزشکان{% endblock %}
+{% block subtitle %}<div class="page-subtitle">ساعات کاری هر پزشک در روزهای هفته</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'schedule_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle-fill"></i> برنامه جدید
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <table class="table table-responsive-stack">
+        <thead>
+        <tr><th>پزشک</th><th>روز</th><th>ساعت شروع</th><th>ساعت پایان</th><th>طول نوبت</th><th>وضعیت</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for s in schedules %}
+            <tr>
+                <td data-label="پزشک"><strong>{{ s.physician.get_full_name }}</strong></td>
+                <td data-label="روز"><span class="badge bg-primary">{{ s.get_day_of_week_display }}</span></td>
+                <td data-label="شروع" style="direction: ltr;">{{ s.start_time|time:"H:i" }}</td>
+                <td data-label="پایان" style="direction: ltr;">{{ s.end_time|time:"H:i" }}</td>
+                <td data-label="طول">{{ s.slot_duration }} دقیقه</td>
+                <td data-label="وضعیت">
+                    {% if s.is_active %}<span class="badge bg-success">فعال</span>
+                    {% else %}<span class="badge bg-secondary">غیرفعال</span>{% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'schedule_edit' s.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <form method="post" action="{% url 'schedule_delete' s.pk %}" class="m-0 d-inline" onsubmit="return confirm('حذف شود؟');">
+                        {% csrf_token %}
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                </td>
+            </tr>
+        {% empty %}
+            <tr><td colspan="7"><div class="empty-state">
+                <i class="bi bi-clock-history"></i>
+                هنوز برنامه‌ای ثبت نشده.
+                <div class="mt-3"><a href="{% url 'schedule_create' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-circle"></i> افزودن اولین برنامه
+                </a></div>
+            </div></td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

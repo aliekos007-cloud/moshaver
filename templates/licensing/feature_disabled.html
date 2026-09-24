@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ feature_title }} — غیرفعال{% endblock %}
+{% block header %}<i class="bi bi-lock-fill"></i> ماژول غیرفعال{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body text-center" style="padding: 3rem 2rem;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 90px; height: 90px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 24px; color: #fff; font-size: 2.6rem; box-shadow: 0 10px 30px rgba(245,158,11,.4); margin-bottom: 1.5rem;">
+                    <i class="bi bi-lock-fill"></i>
+                </div>
+                <h4 class="mb-3">ماژول «{{ feature_title }}» در لایسنس شما فعال نیست</h4>
+                <p class="text-muted mb-4">
+                    برای استفاده از این بخش، لطفاً با فروشنده تماس بگیرید و لایسنس خود را ارتقا دهید.
+                </p>
+                {% if request.user.role == "manager" or request.user.is_superuser %}
+                <a href="{% url 'license_dashboard' %}" class="btn btn-primary">
+                    <i class="bi bi-shield-lock-fill"></i> مشاهده و مدیریت لایسنس
+                </a>
+                {% endif %}
+                <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-arrow-right"></i> بازگشت به داشبورد
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

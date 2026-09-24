@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}تبدیل نوبت به ویزیت{% endblock %}
+{% block header %}<i class="bi bi-clipboard-pulse"></i> تبدیل نوبت به ویزیت{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    بیمار: <strong>{{ appointment.patient.full_name }}</strong> — ساعت: {{ appointment.start_time|time:"H:i" }}
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-clipboard2-pulse"></i> اطلاعات بالینی</h6>
+            {% for field in form %}
+                <div class="mb-3">
+                    <label class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-success">
+            <i class="bi bi-check-circle"></i> شروع ویزیت
+        </button>
+        <a href="{% url 'appointment_detail' appointment.pk %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> انصراف
+        </a>
+    </div>
+</form>
+{% endblock %}

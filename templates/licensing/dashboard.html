@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}لایسنس{% endblock %}
+{% block header %}<i class="bi bi-shield-lock-fill"></i> مدیریت لایسنس{% endblock %}
+{% block subtitle %}<div class="page-subtitle">وضعیت اعتبار، ماژول‌ها و محدودیت‌های نرم‌افزار</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'license_enter_key' %}" class="btn btn-outline-primary">
+        <i class="bi bi-key-fill"></i> وارد کردن کلید
+    </a>
+    <a href="{% url 'license_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle-fill"></i> صدور لایسنس جدید
+    </a>
+{% endblock %}
+
+{% block content %}
+
+{% if license %}
+    <!-- کارت لایسنس اصلی -->
+    <div class="card mb-3" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #fff; border: none;">
+        <div class="card-body" style="padding: 2rem;">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                <div style="flex: 1; min-width: 250px;">
+                    <div style="color: #94a3b8; font-size: .8rem; margin-bottom: .5rem;">
+                        <i class="bi bi-shield-check"></i> کلید لایسنس فعال
+                    </div>
+                    <div style="font-family: monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: 2px; direction: ltr; color: #38bdf8; margin-bottom: 1rem;">
+                        {{ license.license_key }}
+                    </div>
+                    <div class="d-flex gap-3 flex-wrap">
+                        <span class="badge {{ license.status_display_badge.0 }}" style="font-size: .8rem; padding: .5rem .9rem;">
+                            {{ license.status_display_badge.1 }}
+                        </span>
+                        <span class="badge" style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: .8rem; padding: .5rem .9rem;">
+                            {{ license.get_tier_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <div style="text-align: center; min-width: 200px;">
+                    {% if license.days_remaining is not None %}
+                        <div style="font-size: 3rem; font-weight: 700; color: {% if license.is_expiring_soon %}#f59e0b{% else %}#38bdf8{% endif %}; line-height: 1;">
+                            {{ license.days_remaining }}
+                        </div>
+                        <div style="color: #94a3b8; font-size: .85rem;">روز باقی‌مانده</div>
+                        <div style="color: #cbd5e1; font-size: .78rem; margin-top: .5rem;">
+                            تا {{ license.valid_until|jalali_full }}
+                        </div>
+                    {% else %}
+                        <div style="font-size: 1rem; color: #f59e0b;">بدون تاریخ انقضا</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr style="border-color: #334155; margin: 1.5rem 0;">
+
+            <div class="row g-3">
+                <div class="col-md-3">
+                    <div style="color: #94a3b8; font-size: .75rem;">صادر شده برای</div>
+                    <div style="color: #fff; font-weight: 600;">{{ license.licensed_to|default:"—" }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div style="color: #94a3b8; font-size: .75rem;">شماره سریال</div>
+                    <div style="color: #fff; font-family: monospace; font-size: .85rem; direction: ltr;">{{ license.serial_number }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div style="color: #94a3b8; font-size: .75rem;">شناسه نصب</div>
+                    <div style="color: #fff; font-family: monospace; font-size: .85rem; direction: ltr;">{{ license.installation_id }}</div>
+                </div>
+                <div class="col-md-3">
+                    <div style="color: #94a3b8; font-size: .75rem;">نسخه نرم‌افزار</div>
+                    <div style="color: #fff; font-weight: 600;">v{{ license.version }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- محدودیت‌ها و ماژول‌ها -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-5">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-sliders"></i> محدودیت‌ها</h6>
+                    <table class="table table-sm mb-0">
+                        <tr>
+                            <th class="text-muted"><i class="bi bi-people"></i> حداکثر کاربران</th>
+                            <td class="fw-bold">{{ license.max_users }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><i class="bi bi-person-badge"></i> حداکثر پزشکان</th>
+                            <td class="fw-bold">{{ license.max_physicians }}</td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><i class="bi bi-building"></i> حداکثر شعب</th>
+                            <td class="fw-bold">{{ license.max_branches }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-primary mb-3"><i class="bi bi-toggles"></i> ماژول‌های فعال</h6>
+                    <div class="row g-2">
+                        {% with features=license %}
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_inventory %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">انبار</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_finance %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">مالی</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_therapies %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">درمان‌های تخصصی</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_documents %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">مدارک</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_consent %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">رضایت‌نامه</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_reports %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">گزارش‌ها</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_backup %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">پشتیبان‌گیری</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_audit %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">گزارش فعالیت‌ها</span>
+                            </div>
+                        </div>
+                         <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2">
+                                {% if features.enable_appointments %}<i class="bi bi-check-circle-fill text-success"></i>{% else %}<i class="bi bi-x-circle-fill text-danger"></i>{% endif %}
+                                <span class="small">نوبت‌دهی</span>
+                            </div>
+                        </div>
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- دکمه‌های عملیات -->
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+        <a href="{% url 'license_edit' license.pk %}" class="btn btn-outline-primary">
+            <i class="bi bi-pencil"></i> ویرایش لایسنس
+        </a>
+        {% if not license.is_active %}
+            <form method="post" action="{% url 'license_activate' license.pk %}" class="m-0 d-inline">
+                {% csrf_token %}
+                <input type="hidden" name="duration" value="365">
+                <button class="btn btn-success"><i class="bi bi-check-circle"></i> فعال‌سازی ۳۶۵ روزه</button>
+            </form>
+        {% else %}
+            <form method="post" action="{% url 'license_deactivate' license.pk %}" class="m-0 d-inline" onsubmit="return confirm('لایسنس غیرفعال شود؟');">
+                {% csrf_token %}
+                <button class="btn btn-outline-warning"><i class="bi bi-pause-circle"></i> غیرفعال‌سازی</button>
+            </form>
+        {% endif %}
+    </div>
+
+{% else %}
+    <!-- بدون لایسنس -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="empty-state">
+                <i class="bi bi-shield-exclamation"></i>
+                <h5 class="mb-2">لایسنسی صادر نشده است</h5>
+                <p class="mb-4">برای استفاده‌ی حرفه‌ای از سامانه، یک لایسنس صادر کنید یا کلید موجود را وارد کنید.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'license_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> صدور لایسنس جدید
+                    </a>
+                    <a href="{% url 'license_enter_key' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-key"></i> وارد کردن کلید
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- تاریخچه -->
+<div class="card">
+    <div class="card-body">
+        <h6 class="text-primary mb-3"><i class="bi bi-clock-history"></i> تاریخچه لایسنس‌ها</h6>
+        <table class="table table-responsive-stack">
+            <thead>
+            <tr><th>کلید</th><th>نوع</th><th>صادر شده برای</th><th>اعتبار تا</th><th>وضعیت</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for l in history %}
+                <tr>
+                    <td data-label="کلید"><code style="direction: ltr;">{{ l.license_key }}</code></td>
+                    <td data-label="نوع">{{ l.get_tier_display }}</td>
+                    <td data-label="مالک">{{ l.licensed_to|default:"—" }}</td>
+                    <td data-label="اعتبار">{{ l.valid_until|jalali|default:"—" }}</td>
+                    <td data-label="وضعیت"><span class="badge {{ l.status_display_badge.0 }}">{{ l.status_display_badge.1 }}</span></td>
+                    <td>
+                        <a href="{% url 'license_edit' l.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{% url 'license_delete' l.pk %}" class="m-0 d-inline" onsubmit="return confirm('این لایسنس حذف شود؟');">
+                            {% csrf_token %}
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="6">
+                    <div class="empty-state py-3"><i class="bi bi-inbox"></i> تاریخچه‌ای ثبت نشده است.</div>
+                </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

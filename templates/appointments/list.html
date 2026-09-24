@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}لیست نوبت‌ها{% endblock %}
+{% block header %}<i class="bi bi-list-check"></i> لیست نوبت‌ها{% endblock %}
+{% block subtitle %}<div class="page-subtitle">جست‌وجو و فیلتر تمام نوبت‌ها</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'appointment_create' %}" class="btn btn-primary">
+        <i class="bi bi-calendar-plus-fill"></i> نوبت جدید
+    </a>
+    <a href="{% url 'secretary_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-speedometer2"></i> داشبورد
+    </a>
+{% endblock %}
+
+{% block content %}
+
+<!-- فیلترها -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جست‌وجوی بیمار...">
+            </div>
+            <div class="col-md-2">
+                <select name="status" class="form-select">
+                    <option value="">همه وضعیت‌ها</option>
+                    {% for key, label in statuses %}
+                        <option value="{{ key }}" {% if status_filter == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="physician" class="form-select">
+                    <option value="">همه پزشکان</option>
+                    {% for p in physicians %}
+                        <option value="{{ p.pk }}" {% if physician_filter == p.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ p.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="from" value="{{ from_filter }}" class="form-control" placeholder="از">
+            </div>
+            <div class="col-md-2">
+                <input type="date" name="to" value="{{ to_filter }}" class="form-control" placeholder="تا">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- جدول -->
+<div class="card">
+    <table class="table table-responsive-stack">
+        <thead>
+        <tr>
+            <th>تاریخ</th>
+            <th>ساعت</th>
+            <th>بیمار</th>
+            <th>طبیب</th>
+            <th>وضعیت</th>
+            <th>منبع</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for a in appointments %}
+            <tr>
+                <td data-label="تاریخ">{{ a.date|jalali }}</td>
+                <td data-label="ساعت"><span class="badge bg-light text-dark">{{ a.start_time|time:"H:i" }}</span></td>
+                <td data-label="بیمار">
+                    <strong>{{ a.patient.full_name }}</strong>
+                    <div class="small text-muted">{{ a.patient.mobile }}</div>
+                </td>
+                <td data-label="طبیب"><span class="small">{{ a.physician.get_full_name }}</span></td>
+                <td data-label="وضعیت"><span class="badge {{ a.status_badge.0 }}">{{ a.status_badge.1 }}</span></td>
+                <td data-label="منبع"><span class="small text-muted">{{ a.get_source_display }}</span></td>
+                <td>
+                    <a href="{% url 'appointment_detail' a.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="7">
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        هیچ نوبتی با این فیلترها پیدا نشد.
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

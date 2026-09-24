@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}وضعیت Trial{% endblock %}
+{% block header %}<i class="bi bi-hourglass-split"></i> وضعیت دوره آزمایشی{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-info-circle"></i> اطلاعات دوره</h6>
+                <table class="table">
+                    <tr><th>تاریخ شروع دوره</th><td>{{ trial.first_run|jalali_full }}</td></tr>
+                    <tr><th>مدت کل</th><td>{{ trial.total_days }} روز</td></tr>
+                    <tr><th>روزهای سپری‌شده</th><td>{{ trial.elapsed_days }}</td></tr>
+                    <tr>
+                        <th>روزهای باقی‌مانده</th>
+                        <td>
+                            {% if trial.is_active %}
+                                <span class="badge bg-success" style="font-size: 1rem;">{{ trial.remaining_days }} روز</span>
+                            {% else %}
+                                <span class="badge bg-danger" style="font-size: 1rem;">منقضی شده</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-shield-lock"></i> محل ذخیره‌سازی</h6>
+                <p class="text-muted small">
+                    اطلاعات این نصب در ۳ نقطه ذخیره می‌شود تا از تقلب جلوگیری شود.
+                    اگر یکی از آن‌ها حذف یا دست‌کاری شود، از بقیه بازیابی می‌شود.
+                </p>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">✅ <strong>دیتابیس</strong> (db.sqlite3)</li>
+                    <li class="mb-2">✅ <strong>فایل مخفی</strong> (%APPDATA%\.tabib\install.json)</li>
+                    <li class="mb-2">✅ <strong>رجیستری ویندوز</strong> (HKCU\Software\Tabib)</li>
+                </ul>
+                <div class="alert alert-warning small mb-0" style="border-radius: 10px;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    شناسه سخت‌افزاری: <code style="direction: ltr;">{{ state.fingerprint|default:"—"|truncatechars:20 }}</code>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="d-flex gap-2">
+    <a href="{% url 'license_enter_key' %}" class="btn btn-primary">
+        <i class="bi bi-key-fill"></i> وارد کردن کلید لایسنس
+    </a>
+    <a href="{% url 'license_dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-shield-lock"></i> مدیریت لایسنس
+    </a>
+</div>
+{% endblock %}

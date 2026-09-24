@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}تراکنش جدید — طبیب{% endblock %}
+{% block header %}<i class="bi bi-cash-stack"></i> ثبت تراکنش جدید{% endblock %}
+{% block subtitle %}{% if patient %}<div class="page-subtitle">بیمار: <strong>{{ patient.full_name }}</strong></div>{% endif %}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<style>
+    .datepicker-plot-area { font-family: Vazirmatn, tahoma, sans-serif !important; z-index: 9999 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+    {% csrf_token %}
+
+    {% if form.errors %}
+    <div class="alert alert-danger" style="border-radius: 12px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <strong>لطفاً خطاهای زیر را اصلاح کنید:</strong>
+        <ul class="mb-0 mt-2" style="padding-right: 1.2rem;">
+            {% for field_name, errors in form.errors.items %}
+                {% for err in errors %}
+                    <li>
+                        {% if field_name == "__all__" %}خطای کلی: {% endif %}
+                        {{ err }}
+                    </li>
+                {% endfor %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <h6 class="text-primary mb-3"><i class="bi bi-receipt-cutoff"></i> اطلاعات تراکنش</h6>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">نوع تراکنش <span style="color:#ef4444;">*</span></label>
+                    {{ form.transaction_type }}
+                    {% if form.transaction_type.errors %}<div class="text-danger small mt-1">{{ form.transaction_type.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">دسته‌بندی <span style="color:#ef4444;">*</span></label>
+                    {{ form.category }}
+                    {% if form.category.errors %}<div class="text-danger small mt-1">{{ form.category.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">مبلغ (تومان) <span style="color:#ef4444;">*</span></label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}<div class="text-danger small mt-1">{{ form.amount.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">تاریخ <span style="color:#ef4444;">*</span></label>
+                    <input type="text" id="transaction_date_display" class="form-control"
+                           placeholder="مثال: ۱۴۰۵/۰۷/۰۱" readonly autocomplete="off"
+                           style="cursor: pointer; background: #fff;">
+                    {{ form.transaction_date }}
+                    {% if form.transaction_date.errors %}<div class="text-danger small mt-1">{{ form.transaction_date.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">بیمار</label>
+                    {{ form.patient }}
+                    {% if form.patient.errors %}<div class="text-danger small mt-1">{{ form.patient.errors.0 }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">مراجعه مرتبط</label>
+                    {{ form.visit }}
+                    {% if form.visit.errors %}<div class="text-danger small mt-1">{{ form.visit.errors.0 }}</div>{% endif %}
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">توضیحات</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> ثبت تراکنش
+        </button>
+        <a href="{% url 'finance_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle"></i> انصراف
+        </a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    var hiddenField = $("#id_transaction_date");
+    var displayField = $("#transaction_date_display");
+
+    // مقدار پیش‌فرض: امروز (به‌صورت محلی، نه UTC)
+    if (!hiddenField.val()) {
+        var now = new Date();
+        var localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        var gDate = localDate.toISOString().split('T')[0];
+        hiddenField.val(gDate);
+
+        var pToday = new persianDate(now);
+        displayField.val(pToday.format('YYYY/MM/DD'));
+    } else {
+        // تبدیل مقدار میلادی به شمسی برای نمایش
+        var gValue = hiddenField.val();
+        try {
+            var gDate = new Date(gValue);
+            if (!isNaN(gDate.getTime())) {
+                var pDate = new persianDate(gDate);
+                displayField.val(pDate.format('YYYY/MM/DD'));
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    // راه‌اندازی تقویم شمسی
+    displayField.persianDatepicker({
+        format: 'YYYY/MM/DD',
+        altField: '#id_transaction_date',
+        altFormat: 'YYYY-MM-DD',
+        autoClose: true,
+        initialValue: false,
+        observer: true,
+        persianDigit: true,
+        toolbox: { calendarSwitch: { enabled: false } },
+        navigator: { scroll: { enabled: false } }
+    });
+});
+</script>
+{% endblock %}

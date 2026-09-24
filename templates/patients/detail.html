@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}{{ patient.full_name }} — طبیب{% endblock %}
+{% block header %}<i class="bi bi-folder2-open"></i> پرونده الکترونیک{% endblock %}
+{% block subtitle %}<div class="page-subtitle">{{ patient.full_name }} — شماره پرونده {{ patient.file_number }}</div>{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'visit_create' patient.pk %}" class="btn btn-success">
+        <i class="bi bi-plus-circle-fill"></i> مراجعه جدید
+    </a>
+    <a href="{% url 'document_upload' patient.pk %}" class="btn btn-primary">
+        <i class="bi bi-cloud-arrow-up-fill"></i> بارگذاری مدرک
+    </a>
+    <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-pencil"></i> ویرایش
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مشخصات هویتی</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th class="text-muted" style="width: 40%;">شماره پرونده</th><td><strong>{{ patient.file_number }}</strong></td></tr>
+                    <tr><th class="text-muted">نام پدر</th><td>{{ patient.father_name|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">کد ملی</th><td>{{ patient.national_code|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">جنسیت</th><td>{{ patient.get_gender_display }}</td></tr>
+                    <tr><th class="text-muted">تاریخ تولد</th><td>{{ patient.birth_date|jalali_full }}</td></tr>
+                    <tr><th class="text-muted">وضعیت تأهل</th><td>{{ patient.get_marital_status_display|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">شغل</th><td>{{ patient.job|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">تحصیلات</th><td>{{ patient.education|default:"—" }}</td></tr>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-telephone"></i> تماس و آدرس</h6>
+                <table class="table table-sm mb-0">
+                    <tr><th class="text-muted" style="width: 40%;">موبایل</th><td>{{ patient.mobile }}</td></tr>
+                    <tr><th class="text-muted">تلفن</th><td>{{ patient.phone|default:"—" }}</td></tr>
+                    <tr><th class="text-muted">تماس اضطراری</th><td>{{ patient.emergency_name|default:"—" }} — {{ patient.emergency_phone|default:"" }}</td></tr>
+                    <tr>
+                        <th class="text-muted">آدرس</th>
+                        <td>
+                            {{ patient.province }} {{ patient.city }}<br>
+                            {{ patient.street }} {{ patient.alley }} {{ patient.plaque }}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+
+        <!-- ===== مدارک و تصاویر ===== -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-primary mb-0"><i class="bi bi-images"></i> مدارک و تصاویر</h6>
+                    <a href="{% url 'document_upload' patient.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-lg"></i> افزودن مدرک
+                    </a>
+                </div>
+
+                {% if patient.documents.all %}
+                    <div class="row g-2">
+                        {% for doc in patient.documents.all %}
+                            <div class="col-md-4">
+                                <div class="border rounded-3 p-2 h-100" style="border-color: #e2e8f0 !important; background: #f8fafc;">
+                                    <div class="text-center mb-2" style="height: 110px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 8px; overflow: hidden;">
+                                        {% if doc.is_image %}
+                                            <img src="{{ doc.file.url }}" alt="{{ doc.title }}" style="max-width: 100%; max-height: 110px; object-fit: cover;">
+                                        {% elif doc.is_pdf %}
+                                            <i class="bi bi-file-earmark-pdf-fill" style="font-size: 3rem; color: #dc2626;"></i>
+                                        {% else %}
+                                            <i class="bi bi-file-earmark-medical-fill" style="font-size: 3rem; color: #2563eb;"></i>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-center">
+                                        <div class="badge bg-info text-dark mb-1" style="font-size: .65rem;">{{ doc.get_document_type_display }}</div>
+                                        {% if doc.title %}
+                                            <div class="small fw-bold text-truncate" title="{{ doc.title }}">{{ doc.title }}</div>
+                                        {% endif %}
+                                        <div class="text-muted" style="font-size: .68rem;">{{ doc.uploaded_at|jalali }}</div>
+                                        <div class="text-muted" style="font-size: .65rem;">{{ doc.file_size_display }}</div>
+                                    </div>
+                                    <div class="d-flex gap-1 mt-2">
+                                        <a href="{{ doc.file.url }}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill" title="مشاهده">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{{ doc.file.url }}" download class="btn btn-sm btn-outline-secondary" title="دانلود">
+                                            <i class="bi bi-download"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'document_delete' doc.pk %}" class="m-0" onsubmit="return confirm('این مدرک حذف شود؟');">
+                                            {% csrf_token %}
+                                            <button class="btn btn-sm btn-outline-danger" title="حذف">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="bi bi-image"></i>
+                        هنوز مدرکی بارگذاری نشده است.
+                        <div class="mt-3">
+                            <a href="{% url 'document_upload' patient.pk %}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-cloud-arrow-up"></i> بارگذاری اولین مدرک
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+                <!-- ===== رضایت‌نامه‌ها ===== -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="text-primary mb-0"><i class="bi bi-file-earmark-check-fill"></i> رضایت‌نامه‌ها</h6>
+                    <a href="{% url 'consent_create' patient.pk %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-lg"></i> افزودن
+                    </a>
+                </div>
+                {% if patient.consents.all %}
+                    <div class="list-group list-group-flush">
+                        {% for c in patient.consents.all %}
+                            <a href="{% url 'consent_detail' c.pk %}" class="list-group-item list-group-item-action px-0 border-bottom d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong style="font-size: .88rem;">{{ c.title }}</strong>
+                                    <div class="small text-muted">
+                                        {{ c.consent_date|jalali }}
+                                        {% if c.status == "signed" %} • <span class="badge bg-success" style="font-size: .65rem;">امضا شده</span>{% endif %}
+                                    </div>
+                                </div>
+                                <i class="bi bi-chevron-left text-muted"></i>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-muted text-center py-3 small">هنوز رضایت‌نامه‌ای ثبت نشده است.</div>
+                {% endif %}
+            </div>
+        </div>
+
+                <!-- ===== درمان‌های تخصصی ===== -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-heart-pulse"></i> درمان‌های تخصصی</h6>
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <a href="{% url 'therapy_list' patient.pk 'manual' %}" class="text-decoration-none">
+                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#eff6ff'; this.style.borderColor='#2563eb' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
+                                <i class="bi bi-hand-index-thumb" style="font-size: 2rem; color: #2563eb;"></i>
+                                <div class="mt-2 fw-bold" style="color: #0f172a;">اعمال یداوی</div>
+                                <div class="small text-muted">{{ patient.manual_therapies.count }} دوره</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'therapy_list' patient.pk 'reflex' %}" class="text-decoration-none">
+                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#ecfeff'; this.style.borderColor='#06b6d4' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
+                                <i class="bi bi-brightness-high" style="font-size: 2rem; color: #06b6d4;"></i>
+                                <div class="mt-2 fw-bold" style="color: #0f172a;">بازتاب‌درمانی</div>
+                                <div class="small text-muted">{{ patient.reflex_therapies.count }} دوره</div>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'therapy_list' patient.pk 'discopathy' %}" class="text-decoration-none">
+                            <div class="border rounded-3 p-3 text-center h-100" style="border-color: #e2e8f0 !important; background: #f8fafc; transition: all .2s;" onmouseover="this.style.background='#fef3c7'; this.style.borderColor='#f59e0b' !important;" onmouseout="this.style.background='#f8fafc'; this.style.borderColor='#e2e8f0' !important;">
+                                <i class="bi bi-person-arms-up" style="font-size: 2rem; color: #f59e0b;"></i>
+                                <div class="mt-2 fw-bold" style="color: #0f172a;">دیسکوپاتی</div>
+                                <div class="small text-muted">{{ patient.discopathies.count }} پرونده</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== تاریخچه مراجعات ===== -->
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-clock-history"></i> تاریخچه مراجعات</h6>
+                {% for v in visits %}
+                    <div class="border rounded-3 p-3 mb-2" style="border-color: #e2e8f0 !important; background: #f8fafc;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong class="text-dark">{{ v.visited_at|jalali_datetime }}</strong>
+                            <span class="badge bg-primary">{{ v.physician.get_full_name }}</span>
+                        </div>
+                        {% if v.chief_complaint %}
+                            <div class="small mb-1"><b class="text-muted">علت مراجعه:</b> {{ v.chief_complaint }}</div>
+                        {% endif %}
+                        {% if v.diagnosis %}
+                            <div class="small mb-2"><b class="text-muted">تشخیص:</b> {{ v.diagnosis }}</div>
+                        {% endif %}
+                        <a href="{% url 'visit_detail' v.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> مشاهده جزئیات
+                        </a>
+                    </div>
+                {% empty %}
+                    <div class="empty-state">
+                        <i class="bi bi-clipboard2-x"></i>
+                        تا کنون مراجعه‌ای برای این بیمار ثبت نشده است.
+                        <div class="mt-3">
+                            <a href="{% url 'visit_create' patient.pk %}" class="btn btn-sm btn-success">
+                                <i class="bi bi-plus-circle"></i> ثبت اولین مراجعه
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

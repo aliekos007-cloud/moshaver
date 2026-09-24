@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}گزارش فعالیت‌ها — طبیب{% endblock %}
+{% block header %}<i class="bi bi-journal-text"></i> گزارش فعالیت‌ها{% endblock %}
+{% block subtitle %}<div class="page-subtitle">تاریخچه کامل اقدامات کاربران در سامانه — {{ total }} رکورد</div>{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<style>
+    .datepicker-plot-area { font-family: Vazirmatn, tahoma, sans-serif !important; z-index: 9999 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- فیلترها -->
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-3">
+                <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="جست‌وجو...">
+            </div>
+            <div class="col-md-2">
+                <select name="action" class="form-select">
+                    <option value="">همه اقدامات</option>
+                    {% for key, label in actions %}
+                        <option value="{{ key }}" {% if action_filter == key %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="user" class="form-select">
+                    <option value="">همه کاربران</option>
+                    {% for u in users %}
+                        <option value="{{ u.pk }}" {% if user_filter == u.pk|stringformat:"s" %}selected{% endif %}>
+                            {{ u.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <input type="text" id="from_display" class="form-control" placeholder="از تاریخ" readonly
+                       style="cursor: pointer; background: #fff;">
+                <input type="hidden" name="from" id="from_gregorian" value="{{ from_filter }}">
+            </div>
+            <div class="col-md-2">
+                <input type="text" id="to_display" class="form-control" placeholder="تا تاریخ" readonly
+                       style="cursor: pointer; background: #fff;">
+                <input type="hidden" name="to" id="to_gregorian" value="{{ to_filter }}">
+            </div>
+            <div class="col-md-1">
+                <button class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- جدول -->
+<div class="card">
+    <table class="table table-responsive-stack">
+        <thead>
+        <tr>
+            <th>زمان</th>
+            <th>کاربر</th>
+            <th>اقدام</th>
+            <th>مدل / رکورد</th>
+            <th>توضیحات</th>
+            <th>آی‌پی</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for log in logs %}
+            <tr>
+                <td data-label="زمان">
+                    <span class="small">{{ log.created_at|jalali_datetime }}</span>
+                </td>
+                <td data-label="کاربر">
+                    {% if log.user %}
+                        <strong>{{ log.user_display }}</strong>
+                        <div class="small text-muted">{{ log.user.get_role_display }}</div>
+                    {% else %}
+                        <span class="text-muted">{{ log.user_display|default:"—" }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="اقدام">
+                    {% if log.action == "create" %}
+                        <span class="badge bg-success">ایجاد</span>
+                    {% elif log.action == "update" %}
+                        <span class="badge bg-primary">ویرایش</span>
+                    {% elif log.action == "delete" %}
+                        <span class="badge bg-danger">حذف</span>
+                    {% elif log.action == "view" %}
+                        <span class="badge bg-info text-dark">مشاهده</span>
+                    {% elif log.action == "login" %}
+                        <span class="badge bg-success"><i class="bi bi-box-arrow-in-left"></i> ورود</span>
+                    {% elif log.action == "logout" %}
+                        <span class="badge bg-secondary"><i class="bi bi-box-arrow-right"></i> خروج</span>
+                    {% elif log.action == "login_failed" %}
+                        <span class="badge bg-danger"><i class="bi bi-exclamation-triangle"></i> ورود ناموفق</span>
+                    {% elif log.action == "print" %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-printer"></i> چاپ</span>
+                    {% elif log.action == "backup" %}
+                        <span class="badge bg-primary"><i class="bi bi-shield-check"></i> پشتیبان</span>
+                    {% elif log.action == "restore" %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-arrow-counterclockwise"></i> بازیابی</span>
+                    {% else %}
+                        <span class="badge bg-light text-dark">{{ log.get_action_display }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="مدل">
+                    {% if log.model_name %}
+                        <span class="badge bg-light text-dark">{{ log.model_name }}</span>
+                        {% if log.object_repr %}
+                            <div class="small text-muted mt-1">{{ log.object_repr|truncatechars:60 }}</div>
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td data-label="توضیحات">
+                    <span class="small">{{ log.description|default:"—"|truncatechars:100 }}</span>
+                </td>
+                <td data-label="آی‌پی">
+                    <span class="small text-muted" style="direction: ltr;">{{ log.ip_address|default:"—" }}</span>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="6">
+                    <div class="empty-state">
+                        <i class="bi bi-journal-x"></i>
+                        هیچ گزارشی با این فیلترها پیدا نشد.
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if total > 500 %}
+<div class="alert alert-info mt-3" style="border-radius: 12px;">
+    <i class="bi bi-info-circle-fill"></i>
+    فقط ۵۰۰ رکورد آخر نمایش داده می‌شود. برای مشاهده دقیق‌تر، از فیلترها استفاده کنید.
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    function setupDatePicker(displayId, hiddenId) {
+        var hidden = $(hiddenId);
+        var display = $(displayId);
+
+        display.persianDatepicker({
+            format: 'YYYY/MM/DD',
+            altField: hiddenId,
+            altFormat: 'YYYY-MM-DD',
+            autoClose: true,
+            initialValue: false,
+            observer: true,
+            persianDigit: true,
+            toolbox: { calendarSwitch: { enabled: false } },
+            navigator: { scroll: { enabled: false } }
+        });
+
+        // اگه مقدار اولیه داشت، نمایش بده
+        var gValue = hidden.val();
+        if (gValue) {
+            try {
+                var gDate = new Date(gValue);
+                if (!isNaN(gDate.getTime())) {
+                    var pDate = new persianDate(gDate);
+                    display.val(pDate.format('YYYY/MM/DD'));
+                }
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    setupDatePicker("#from_display", "#from_gregorian");
+    setupDatePicker("#to_display", "#to_gregorian");
+});
+</script>
+{% endblock %}

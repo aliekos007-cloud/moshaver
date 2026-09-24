@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% block title %}جزئیات مراجعه — طبیب{% endblock %}
+{% block header %}<i class="bi bi-file-medical-fill"></i> جزئیات مراجعه{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    بیمار: <strong>{{ visit.patient.full_name }}</strong> —
+    تاریخ: {{ visit.visited_at|jalali_datetime }} —
+    شماره نسخه: <strong style="direction: ltr; display: inline-block;">{{ visit.prescription_serial|default:"—" }}</strong>
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'visit_print' visit.pk %}" class="btn btn-primary" target="_blank">
+        <i class="bi bi-printer-fill"></i> چاپ نسخه
+    </a>
+    <a href="{% url 'patient_detail' visit.patient.pk %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت به پرونده
+    </a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- ستون چپ: اطلاعات بالینی -->
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-clipboard2-pulse"></i> اطلاعات بالینی</h6>
+                <div class="mb-3">
+                    <div class="text-muted small fw-bold mb-1">علت مراجعه</div>
+                    <div>{{ visit.chief_complaint|default:"—"|linebreaksbr }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small fw-bold mb-1">شرح حال</div>
+                    <div>{{ visit.history|default:"—"|linebreaksbr }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small fw-bold mb-1">شرح مختصر بیماری</div>
+                    <div>{{ visit.brief_history|default:"—"|linebreaksbr }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small fw-bold mb-1">تشخیص</div>
+                    <div class="text-success fw-bold">{{ visit.diagnosis|default:"—"|linebreaksbr }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small fw-bold mb-1">برنامه درمان</div>
+                    <div>{{ visit.treatment_plan|default:"—"|linebreaksbr }}</div>
+                </div>
+                <div>
+                    <div class="text-muted small fw-bold mb-1">نتیجه پیگیری</div>
+                    <div>{{ visit.follow_up|default:"—"|linebreaksbr }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ستون راست: تجویزها -->
+    <div class="col-lg-7">
+
+        <!-- نسخه دارویی -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-capsule"></i> نسخه دارویی</h6>
+                {% for item in visit.prescription_items.all %}
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                        <div>
+                            <strong class="text-dark">{{ item.medicine.name }}</strong>
+                            <div class="small text-muted mt-1">
+                                {% if item.dose %}<span class="badge bg-light text-dark">مقدار: {{ item.dose }}</span>{% endif %}
+                                {% if item.quantity %}<span class="badge bg-light text-dark">تعداد: {{ item.quantity }}</span>{% endif %}
+                                {% if item.timing %}<span class="badge bg-light text-dark">زمان: {{ item.timing }}</span>{% endif %}
+                                {% if item.duration %}<span class="badge bg-light text-dark">مدت: {{ item.duration }}</span>{% endif %}
+                            </div>
+                            {% if item.note %}<div class="small text-muted mt-1">{{ item.note }}</div>{% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="medicine">
+                            <input type="hidden" name="item_id" value="{{ item.pk }}">
+                            <button class="btn btn-sm btn-outline-danger" title="حذف">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small text-center py-3">دارویی اضافه نشده است.</div>
+                {% endfor %}
+
+                <form method="post" class="row g-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_medicine">
+                    <div class="col-md-5">
+                        <select name="medicine" class="form-select form-select-sm" required>
+                            <option value="">— انتخاب دارو —</option>
+                            {% for m in medicines %}<option value="{{ m.pk }}">{{ m.name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input name="dose" class="form-control form-control-sm" placeholder="مقدار">
+                    </div>
+                    <div class="col-md-2">
+                        <input name="quantity" class="form-control form-control-sm" placeholder="تعداد">
+                    </div>
+                    <div class="col-md-3">
+                        <input name="timing" class="form-control form-control-sm" placeholder="زمان مصرف">
+                    </div>
+                    <div class="col-md-4">
+                        <input name="duration" class="form-control form-control-sm" placeholder="مدت مصرف">
+                    </div>
+                    <div class="col-md-5">
+                        <input name="note" class="form-control form-control-sm" placeholder="توضیحات">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary btn-sm w-100">
+                            <i class="bi bi-plus-lg"></i> افزودن
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- تغذیه: غذا و میوه -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-egg-fried"></i> تغذیه — غذا و میوه</h6>
+
+                {% for x in visit.foods.all %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-egg-fried"></i> غذا</span>
+                            <strong class="ms-2">{{ x.food.name }}</strong>
+                            {% if x.note %}<span class="small text-muted ms-2">— {{ x.note }}</span>{% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="food">
+                            <input type="hidden" name="item_id" value="{{ x.pk }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                {% endfor %}
+
+                {% for x in visit.fruits.all %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <span class="badge bg-danger"><i class="bi bi-flower2"></i> میوه</span>
+                            <strong class="ms-2">{{ x.fruit.name }}</strong>
+                            {% if x.note %}<span class="small text-muted ms-2">— {{ x.note }}</span>{% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="fruit">
+                            <input type="hidden" name="item_id" value="{{ x.pk }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                {% endfor %}
+
+                {% if not visit.foods.all and not visit.fruits.all %}
+                    <div class="text-muted small text-center py-3">موردی اضافه نشده است.</div>
+                {% endif %}
+
+                <div class="row g-2 mt-3">
+                    <form method="post" class="col-md-6 d-flex gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_food">
+                        <select name="food" class="form-select form-select-sm" required>
+                            <option value="">— غذا —</option>
+                            {% for f in foods %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
+                        </select>
+                        <input name="note" class="form-control form-control-sm" placeholder="توضیح">
+                        <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                    </form>
+                    <form method="post" class="col-md-6 d-flex gap-2">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="add_fruit">
+                        <select name="fruit" class="form-select form-select-sm" required>
+                            <option value="">— میوه —</option>
+                            {% for f in fruits %}<option value="{{ f.pk }}">{{ f.name }}</option>{% endfor %}
+                        </select>
+                        <input name="note" class="form-control form-control-sm" placeholder="توضیح">
+                        <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- توصیه‌ها -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-chat-left-heart"></i> توصیه‌ها</h6>
+                {% for x in visit.recommendations.all %}
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                        <div>
+                            <strong>{{ x.recommendation.title }}</strong>
+                            <span class="badge bg-info text-dark ms-1">{{ x.recommendation.get_category_display }}</span>
+                            {% if x.custom_body %}
+                                <div class="small text-muted mt-1">{{ x.custom_body|linebreaksbr }}</div>
+                            {% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="recommendation">
+                            <input type="hidden" name="item_id" value="{{ x.pk }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small text-center py-3">توصیه‌ای اضافه نشده است.</div>
+                {% endfor %}
+
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_recommendation">
+                    <select name="recommendation" class="form-select form-select-sm" required>
+                        <option value="">— انتخاب توصیه —</option>
+                        {% for r in recommendations %}<option value="{{ r.pk }}">{{ r.title }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- پرهیزات -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-slash-circle"></i> پرهیزات</h6>
+                {% for x in visit.avoidances.all %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ x.avoidance.name }}</strong>
+                            {% if x.avoidance.duration %}<span class="small text-muted ms-2">— {{ x.avoidance.duration }}</span>{% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="avoidance">
+                            <input type="hidden" name="item_id" value="{{ x.pk }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small text-center py-3">پرهیزی اضافه نشده است.</div>
+                {% endfor %}
+
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_avoidance">
+                    <select name="avoidance" class="form-select form-select-sm" required>
+                        <option value="">— انتخاب پرهیز —</option>
+                        {% for a in avoidances %}<option value="{{ a.pk }}">{{ a.name }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                </form>
+            </div>
+        </div>
+
+        <!-- الزامات غذایی -->
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-primary mb-3"><i class="bi bi-basket2"></i> الزامات غذایی</h6>
+                {% for x in visit.nutritions.all %}
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong>{{ x.nutrition.title }}</strong>
+                            {% if x.nutrition.description %}<div class="small text-muted mt-1">{{ x.nutrition.description }}</div>{% endif %}
+                        </div>
+                        <form method="post" class="m-0">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_item">
+                            <input type="hidden" name="model" value="nutrition">
+                            <input type="hidden" name="item_id" value="{{ x.pk }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <div class="text-muted small text-center py-3">الزامی اضافه نشده است.</div>
+                {% endfor %}
+
+                <form method="post" class="d-flex gap-2 mt-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_nutrition">
+                    <select name="nutrition" class="form-select form-select-sm" required>
+                        <option value="">— انتخاب الزام —</option>
+                        {% for n in nutritions %}<option value="{{ n.pk }}">{{ n.title }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i></button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
