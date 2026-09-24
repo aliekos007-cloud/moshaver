@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}تغییر اتاق{% endblock %}
+
+{% block header %}<i class="bi bi-arrow-left-right"></i> تغییر اتاق{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'presence_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="presence-avatar" style="width:52px;height:52px;font-size:1.2rem;background:linear-gradient(135deg,#06b6d4,#2563eb);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">
+                        {{ presence.consultant.first_name|first }}
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ presence.consultant.get_full_name }}</div>
+                        <div class="small text-muted">
+                            اتاق فعلی:
+                            {% if presence.room %}
+                                <span class="badge bg-secondary">{{ presence.room.name }}</span>
+                            {% else %}
+                                <span class="text-muted">بدون اتاق</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">اتاق جدید</label>
+                        {{ form.room }}
+                        {% if form.room.errors %}
+                            <div class="text-danger small mt-1">{{ form.room.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">دلیل تغییر</label>
+                        {{ form.note }}
+                        {% if form.note.errors %}
+                            <div class="text-danger small mt-1">{{ form.note.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> ذخیره
+                        </button>
+                        <a href="{% url 'presence_list' %}" class="btn btn-outline-secondary">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

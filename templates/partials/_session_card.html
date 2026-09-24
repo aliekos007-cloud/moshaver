@@ -1,4 +1,5 @@
 {% load jalali_tags %}
+{% load persian_numbers %}
 
 <div class="session-header">
     <div>
@@ -51,7 +52,7 @@
     </div>
     <div class="timer-item">
         <span class="label">مدت</span>
-        <span class="value">{{ s.actual_duration_minutes }} دقیقه</span>
+        <span class="value">{{ s.actual_duration_minutes|pnum }} دقیقه</span>
     </div>
 </div>
 {% endif %}
@@ -62,7 +63,7 @@
     </span>
     <span class="fee-value">
         <span class="t-fee">
-            {% if s.final_fee %}{{ s.final_fee|floatformat:0 }}{% else %}0{% endif %}
+            {% if s.final_fee %}{{ s.final_fee|pnum }}{% else %}۰{% endif %}
         </span>
         تومان
     </span>
@@ -95,12 +96,3 @@
         </button>
     {% endif %}
 </div>
-
-<script>
-function endSession(id) { alert('به‌زودی: پایان جلسهٔ ' + id); }
-function extendSession(id, min) { alert('به‌زودی: تمدید ' + min + ' دقیقه‌ای جلسهٔ ' + id); }
-function pauseSession(id) { alert('به‌زودی: وقفهٔ جلسهٔ ' + id); }
-function resumeSession(id) { alert('به‌زودی: ادامهٔ جلسهٔ ' + id); }
-function paySession(id) { alert('به‌زودی: پرداخت جلسهٔ ' + id); }
-function deferPayment(id) { alert('به‌زودی: نسیهٔ جلسهٔ ' + id); }
-</script>

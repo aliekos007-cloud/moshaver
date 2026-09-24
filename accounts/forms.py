@@ -1,7 +1,18 @@
 from django import forms
 from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from .models import User, Role, ConsultantLevel
+
+
+# ==================================================
+# پیام‌های خطای فارسی مشترک
+# ==================================================
+
+REQUIRED_MSG = "پر کردن این فیلد الزامی است."
+INVALID_MSG = "مقدار وارد شده معتبر نیست."
+UNIQUE_MSG = "این مقدار قبلاً ثبت شده است."
+MIN_LENGTH_MSG = "این مقدار باید حداقل {n} کاراکتر باشد."
 
 
 # ==================================================
@@ -11,13 +22,26 @@ from .models import User, Role, ConsultantLevel
 class UserCreateForm(forms.ModelForm):
     password = forms.CharField(
         label="رمز عبور",
-        widget=forms.PasswordInput(attrs={"class": "form-control"}),
-        min_length=6,
-        help_text="حداقل ۶ کاراکتر",
+        widget=forms.PasswordInput(attrs={
+            "class": "form-control",
+            "autocomplete": "new-password",
+        }),
+        min_length=8,
+        error_messages={
+            "required": "وارد کردن رمز عبور الزامی است.",
+            "min_length": "رمز عبور باید حداقل ۸ کاراکتر باشد.",
+        },
+        help_text="حداقل ۸ کاراکتر شامل حرف و عدد",
     )
     password_confirm = forms.CharField(
         label="تکرار رمز عبور",
-        widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        widget=forms.PasswordInput(attrs={
+            "class": "form-control",
+            "autocomplete": "new-password",
+        }),
+        error_messages={
+            "required": "تکرار رمز عبور الزامی است.",
+        },
     )
 
     class Meta:
@@ -36,30 +60,90 @@ class UserCreateForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {
-            "consultant_level": "سطح مشاور (فقط برای نقش مشاور)",
+            "first_name": "نام",
+            "last_name": "نام خانوادگی",
+            "national_code": "کد ملی",
+            "phone": "تلفن همراه",
+            "role": "نقش",
+            "consultant_level": "سطح مشاور",
+            "is_active": "فعال",
+        }
+        error_messages = {
+            "first_name": {"required": "وارد کردن نام الزامی است."},
+            "last_name": {"required": "وارد کردن نام خانوادگی الزامی است."},
+            "national_code": {
+                "required": "وارد کردن کد ملی الزامی است.",
+                "unique": "این کد ملی قبلاً ثبت شده است.",
+            },
+            "role": {"required": "انتخاب نقش الزامی است."},
         }
 
+    def clean_first_name(self):
+        name = self.cleaned_data.get("first_name", "").strip()
+        if len(name) < 2:
+            raise forms.ValidationError("نام باید حداقل ۲ کاراکتر باشد.")
+        return name
+
+    def clean_last_name(self):
+        name = self.cleaned_data.get("last_name", "").strip()
+        if len(name) < 2:
+            raise forms.ValidationError("نام خانوادگی باید حداقل ۲ کاراکتر باشد.")
+        return name
+
     def clean_national_code(self):
-        code = self.cleaned_data["national_code"]
+        code = self.cleaned_data.get("national_code", "").strip()
+
+        # تبدیل ارقام فارسی به انگلیسی
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        for i, d in enumerate(persian_digits):
+            code = code.replace(d, str(i))
+
+        if not code:
+            raise forms.ValidationError("وارد کردن کد ملی الزامی است.")
         if not code.isdigit():
             raise forms.ValidationError("کد ملی باید فقط شامل اعداد باشد.")
         if len(code) != 10:
             raise forms.ValidationError("کد ملی باید ۱۰ رقم باشد.")
         if User.objects.filter(national_code=code).exists():
-            raise forms.ValidationError("این کد ملی قبلاً ثبت شده است.")
+            raise forms.ValidationError("این کد ملی قبلاً برای کاربر دیگری ثبت شده است.")
         return code
+
+    def clean_phone(self):
+        phone = self.cleaned_data.get("phone", "").strip()
+
+        # تبدیل ارقام فارسی
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        for i, d in enumerate(persian_digits):
+            phone = phone.replace(d, str(i))
+
+        if phone and not phone.isdigit():
+            raise forms.ValidationError("شماره تلفن باید فقط شامل اعداد باشد.")
+        return phone
 
     def clean(self):
         cleaned = super().clean()
         p1 = cleaned.get("password")
         p2 = cleaned.get("password_confirm")
+
         if p1 and p2 and p1 != p2:
-            raise forms.ValidationError("رمز عبور و تکرار آن یکسان نیستند.")
+            self.add_error("password_confirm", "رمز عبور و تکرار آن یکسان نیستند.")
+
         if p1:
             try:
                 validate_password(p1)
-            except forms.ValidationError as e:
-                self.add_error("password", e)
+            except ValidationError as e:
+                # ترجمهٔ پیام‌های Django به فارسی
+                messages_map = {
+                    "This password is too short. It must contain at least 8 characters.":
+                        "رمز عبور باید حداقل ۸ کاراکتر باشد.",
+                    "This password is too common.":
+                        "این رمز عبور خیلی رایجه. یه رمز قوی‌تر انتخاب کنید.",
+                    "This password is entirely numeric.":
+                        "رمز عبور نمی‌تواند فقط شامل اعداد باشد.",
+                }
+                for msg in e.messages:
+                    translated = messages_map.get(msg, msg)
+                    self.add_error("password", translated)
 
         role = cleaned.get("role")
         level = cleaned.get("consultant_level")
@@ -93,11 +177,28 @@ class UserEditForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {
-            "consultant_level": "سطح مشاور (فقط برای نقش مشاور)",
+            "first_name": "نام",
+            "last_name": "نام خانوادگی",
+            "national_code": "کد ملی",
+            "phone": "تلفن همراه",
+            "role": "نقش",
+            "consultant_level": "سطح مشاور",
+            "is_active": "فعال",
+        }
+        error_messages = {
+            "first_name": {"required": "وارد کردن نام الزامی است."},
+            "last_name": {"required": "وارد کردن نام خانوادگی الزامی است."},
+            "national_code": {"required": "وارد کردن کد ملی الزامی است."},
         }
 
     def clean_national_code(self):
-        code = self.cleaned_data["national_code"]
+        code = self.cleaned_data.get("national_code", "").strip()
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        for i, d in enumerate(persian_digits):
+            code = code.replace(d, str(i))
+
+        if not code:
+            raise forms.ValidationError("وارد کردن کد ملی الزامی است.")
         if not code.isdigit():
             raise forms.ValidationError("کد ملی باید فقط شامل اعداد باشد.")
         if len(code) != 10:
@@ -119,24 +220,44 @@ class UserPasswordForm(forms.Form):
     new_password = forms.CharField(
         label="رمز عبور جدید",
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
-        min_length=6,
+        min_length=8,
+        error_messages={
+            "required": "وارد کردن رمز عبور جدید الزامی است.",
+            "min_length": "رمز عبور باید حداقل ۸ کاراکتر باشد.",
+        },
     )
     new_password_confirm = forms.CharField(
         label="تکرار رمز جدید",
         widget=forms.PasswordInput(attrs={"class": "form-control"}),
+        error_messages={
+            "required": "تکرار رمز جدید الزامی است.",
+        },
     )
 
     def clean(self):
         cleaned = super().clean()
         p1 = cleaned.get("new_password")
         p2 = cleaned.get("new_password_confirm")
+
         if p1 and p2 and p1 != p2:
-            raise forms.ValidationError("رمز عبور و تکرار آن یکسان نیستند.")
+            self.add_error("new_password_confirm", "رمز عبور و تکرار آن یکسان نیستند.")
+
         if p1:
             try:
                 validate_password(p1)
-            except forms.ValidationError as e:
-                self.add_error("new_password", e)
+            except ValidationError as e:
+                messages_map = {
+                    "This password is too short. It must contain at least 8 characters.":
+                        "رمز عبور باید حداقل ۸ کاراکتر باشد.",
+                    "This password is too common.":
+                        "این رمز عبور خیلی رایجه. یه رمز قوی‌تر انتخاب کنید.",
+                    "This password is entirely numeric.":
+                        "رمز عبور نمی‌تواند فقط شامل اعداد باشد.",
+                }
+                for msg in e.messages:
+                    translated = messages_map.get(msg, msg)
+                    self.add_error("new_password", translated)
+
         return cleaned
 
 
@@ -145,7 +266,6 @@ class UserPasswordForm(forms.Form):
 # ==================================================
 
 class PersianNumberInput(forms.TextInput):
-    """ورودی متنی که اعداد را به فارسی نمایش می‌دهد."""
     input_type = "text"
 
     def __init__(self, attrs=None):
@@ -165,11 +285,6 @@ class PersianNumberInput(forms.TextInput):
 # ==================================================
 
 class ConsultantLevelForm(forms.ModelForm):
-    """
-    فرم ساخت و ویرایش سطح مشاور.
-    طراحی‌شده برای راحتی کاربر — اعداد به فارسی نمایش داده می‌شوند.
-    """
-
     class Meta:
         model = ConsultantLevel
         fields = [
@@ -192,31 +307,16 @@ class ConsultantLevelForm(forms.ModelForm):
                 "placeholder": "مثلاً: دکتری، کارشناسی ارشد، کارشناس",
             }),
             "standard_minutes": PersianNumberInput(),
-            "base_price": PersianNumberInput(attrs={
-                "placeholder": "مثلاً: 800000",
-            }),
-            "overtime_per_minute": PersianNumberInput(attrs={
-                "placeholder": "مثلاً: 20000",
-            }),
+            "base_price": PersianNumberInput(attrs={"placeholder": "مثلاً: 800000"}),
+            "overtime_per_minute": PersianNumberInput(attrs={"placeholder": "مثلاً: 20000"}),
             "grace_minutes": PersianNumberInput(),
             "rounding_minutes": PersianNumberInput(),
             "max_minutes": PersianNumberInput(),
             "insurance_share": PersianNumberInput(),
-            "effective_from": forms.DateInput(attrs={
-                "class": "form-control",
-                "type": "date",
-            }),
-            "effective_to": forms.DateInput(attrs={
-                "class": "form-control",
-                "type": "date",
-            }),
-            "color": forms.TextInput(attrs={
-                "class": "form-control",
-                "type": "color",
-            }),
-            "is_active": forms.CheckboxInput(attrs={
-                "class": "form-check-input",
-            }),
+            "effective_from": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "effective_to": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "color": forms.TextInput(attrs={"class": "form-control", "type": "color"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
         labels = {
             "name": "عنوان سطح",
@@ -239,6 +339,13 @@ class ConsultantLevelForm(forms.ModelForm):
             "max_minutes": "بیش از این زمان، سیستم هشدار می‌دهد",
             "insurance_share": "اگر بیمه قبول نمی‌کنید، ۰ بگذارید",
             "effective_to": "خالی بگذارید اگر هنوز معتبر است",
+        }
+        error_messages = {
+            "name": {"required": "وارد کردن عنوان سطح الزامی است."},
+            "standard_minutes": {"required": "زمان استاندارد الزامی است."},
+            "base_price": {"required": "مبلغ پایه الزامی است."},
+            "overtime_per_minute": {"required": "هزینهٔ هر دقیقهٔ مازاد الزامی است."},
+            "effective_from": {"required": "تاریخ شروع اعتبار الزامی است."},
         }
 
     def __init__(self, *args, **kwargs):

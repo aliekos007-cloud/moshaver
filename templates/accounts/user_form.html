@@ -1,91 +1,360 @@
 {% extends "base.html" %}
-{% block title %}{{ title }} — طبیب{% endblock %}
+
+{% block title %}{{ title }}{% endblock %}
+
 {% block header %}<i class="bi bi-person-plus-fill"></i> {{ title }}{% endblock %}
 
+{% block topbar_actions %}
+<a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid var(--primary);
+    }
+
+    .form-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .form-section-title i { color: var(--primary); }
+
+    .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
+
+    .consultant-section {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid #0ea5e9;
+        display: none;
+    }
+
+    .consultant-section.show { display: block; }
+
+    .consultant-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0369a1;
+        margin-bottom: .35rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .consultant-section-desc {
+        font-size: .78rem;
+        color: #0284c7;
+        margin-bottom: 1rem;
+    }
+
+    /* ===== کادر وضعیت ===== */
+    .status-section {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .status-section.inactive {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-right-color: #94a3b8;
+    }
+
+    .status-section-text { flex: 1; }
+
+    .status-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #065f46;
+        margin-bottom: .2rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .status-section.inactive .status-section-title { color: #475569; }
+
+    .status-section-desc {
+        font-size: .78rem;
+        color: #10b981;
+    }
+
+    .status-section.inactive .status-section-desc { color: #94a3b8; }
+
+    .status-toggle {
+        position: relative;
+        display: inline-block;
+        width: 56px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+
+    .status-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .status-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #cbd5e1;
+        transition: .3s;
+        border-radius: 32px;
+    }
+
+    .status-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 24px;
+        width: 24px;
+        right: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .status-toggle input:checked + .status-toggle-slider { background-color: #10b981; }
+    .status-toggle input:checked + .status-toggle-slider:before { transform: translateX(-24px); }
+</style>
+{% endblock %}
+
 {% block content %}
-<form method="post" novalidate>
-    {% csrf_token %}
+<div class="row">
+    <div class="col-lg-9">
+        <form method="post" novalidate id="user-form">
+            {% csrf_token %}
 
-    {% if form.non_field_errors %}
-        <div class="alert alert-danger" style="border-radius: 12px;">
-            {% for err in form.non_field_errors %}{{ err }}<br>{% endfor %}
-        </div>
-    {% endif %}
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                </div>
+            {% endif %}
 
-    {% if is_self %}
-        <div class="alert alert-info" style="border-radius: 12px;">
-            <i class="bi bi-info-circle-fill"></i>
-            شما در حال ویرایش حساب خودتان هستید — نقش و وضعیت فعال قابل تغییر نیست.
-        </div>
-    {% endif %}
+            {% if is_self %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle-fill"></i>
+                    شما در حال ویرایش حساب خودتان هستید — نقش و وضعیت فعال قابل تغییر نیست.
+                </div>
+            {% endif %}
 
-    <div class="card mb-3">
-        <div class="card-body">
-            <h6 class="text-primary mb-3"><i class="bi bi-person-lines-fill"></i> اطلاعات کاربر</h6>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">نام <span class="required-star">*</span></label>
-                    {{ form.first_name }}
-                    {% if form.first_name.errors %}<div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">نام خانوادگی <span class="required-star">*</span></label>
-                    {{ form.last_name }}
-                    {% if form.last_name.errors %}<div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">کد ملی <span class="required-star">*</span></label>
-                    {{ form.national_code }}
-                    {% if form.national_code.errors %}<div class="text-danger small mt-1">{{ form.national_code.errors.0 }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">تلفن همراه</label>
-                    {{ form.phone }}
-                    {% if form.phone.errors %}<div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>{% endif %}
-                </div>
-                <div class="col-md-6">
-                    <label class="form-label">نقش <span class="required-star">*</span></label>
-                    {{ form.role }}
-                    {% if form.role.errors %}<div class="text-danger small mt-1">{{ form.role.errors.0 }}</div>{% endif %}
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="form-check">
-                        {{ form.is_active }}
-                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}">حساب فعال باشد</label>
+            <!-- ===== وضعیت فعال/غیرفعال ===== -->
+            <div class="status-section {% if not form.is_active.value %}inactive{% endif %}" id="status-section">
+                <div class="status-section-text">
+                    <div class="status-section-title">
+                        <i class="bi bi-power"></i>
+                        وضعیت حساب
+                    </div>
+                    <div class="status-section-desc" id="status-desc">
+                        {% if form.is_active.value %}
+                            این کاربر می‌تواند وارد سیستم شود
+                        {% else %}
+                            این کاربر غیرفعال است و نمی‌تواند وارد شود
+                        {% endif %}
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    {% if form.password %}
-        <div class="card mb-3">
-            <div class="card-body">
-                <h6 class="text-primary mb-3"><i class="bi bi-shield-lock"></i> رمز عبور</h6>
+                <label class="status-toggle">
+                    {{ form.is_active }}
+                    <span class="status-toggle-slider"></span>
+                </label>
+            </div>
+
+            <!-- ===== اطلاعات کاربر ===== -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-person-lines-fill"></i> اطلاعات کاربر
+                </div>
+
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label">رمز عبور <span class="required-star">*</span></label>
-                        {{ form.password }}
-                        {% if form.password.help_text %}<div class="text-muted small mt-1">{{ form.password.help_text }}</div>{% endif %}
-                        {% if form.password.errors %}<div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>{% endif %}
+                        <label class="form-label">
+                            نام <span class="required-star">*</span>
+                        </label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.first_name.errors.0 }}</div>
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label">تکرار رمز عبور <span class="required-star">*</span></label>
-                        {{ form.password_confirm }}
-                        {% if form.password_confirm.errors %}<div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>{% endif %}
+                        <label class="form-label">
+                            نام خانوادگی <span class="required-star">*</span>
+                        </label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.last_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            کد ملی <span class="required-star">*</span>
+                        </label>
+                        {{ form.national_code }}
+                        {% if form.national_code.errors %}
+                            <div class="text-danger small mt-1">{{ form.national_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">تلفن همراه</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <div class="text-danger small mt-1">{{ form.phone.errors.0 }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-        </div>
-    {% endif %}
 
-    <div class="d-flex gap-2">
-        <button class="btn btn-primary">
-            <i class="bi bi-check-circle"></i> ذخیره
-        </button>
-        <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-circle"></i> انصراف
-        </a>
+            <!-- ===== نقش ===== -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-shield-check"></i> نقش
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            نقش <span class="required-star">*</span>
+                        </label>
+                        {{ form.role }}
+                        {% if form.role.errors %}
+                            <div class="text-danger small mt-1">{{ form.role.errors.0 }}</div>
+                        {% endif %}
+                        <div class="small text-muted mt-1">
+                            مشاور = دسترسی بالینی | منشی = نوبت‌دهی و مالی | مدیر = همه‌چیز
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== سطح مشاور (فقط وقتی نقش=مشاور) ===== -->
+            <div class="consultant-section" id="consultant-section">
+                <div class="consultant-section-title">
+                    <i class="bi bi-award-fill"></i> سطح مشاور
+                </div>
+                <div class="consultant-section-desc">
+                    تعرفه و زمان استاندارد جلسات این مشاور بر اساس این سطح محاسبه می‌شود.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            سطح <span class="required-star">*</span>
+                        </label>
+                        {{ form.consultant_level }}
+                        {% if form.consultant_level.errors %}
+                            <div class="text-danger small mt-1">{{ form.consultant_level.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== رمز عبور (فقط در ساخت) ===== -->
+            {% if form.password %}
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-shield-lock"></i> رمز عبور
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            رمز عبور <span class="required-star">*</span>
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.help_text %}
+                            <div class="text-muted small mt-1">{{ form.password.help_text }}</div>
+                        {% endif %}
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            تکرار رمز عبور <span class="required-star">*</span>
+                        </label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                            <div class="text-danger small mt-1">{{ form.password_confirm.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <hr class="my-4">
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> ذخیره
+                </button>
+                <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i> انصراف
+                </a>
+            </div>
+        </form>
     </div>
-</form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ===== نمایش/مخفی کردن کادر سطح مشاور =====
+    const roleSelect = document.getElementById('id_role');
+    const consultantSection = document.getElementById('consultant-section');
+
+    function toggleConsultantSection() {
+        if (!roleSelect || !consultantSection) return;
+        if (roleSelect.value === 'consultant') {
+            consultantSection.classList.add('show');
+        } else {
+            consultantSection.classList.remove('show');
+        }
+    }
+
+    if (roleSelect) {
+        roleSelect.addEventListener('change', toggleConsultantSection);
+        toggleConsultantSection();
+    }
+
+    // ===== تغییر ظاهر کادر وضعیت =====
+    const activeCheckbox = document.getElementById('id_is_active');
+    const statusSection = document.getElementById('status-section');
+    const statusDesc = document.getElementById('status-desc');
+
+    if (activeCheckbox && statusSection) {
+        activeCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                statusSection.classList.remove('inactive');
+                statusDesc.textContent = 'این کاربر می‌تواند وارد سیستم شود';
+            } else {
+                statusSection.classList.add('inactive');
+                statusDesc.textContent = 'این کاربر غیرفعال است و نمی‌تواند وارد شود';
+            }
+        });
+    }
+})();
+</script>
 {% endblock %}

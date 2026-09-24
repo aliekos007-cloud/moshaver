@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}جلسه{% endblock %}
+
+{% block header %}<i class="bi bi-calendar-check"></i> جلسه{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ session.client.full_name }} — {{ session.scheduled_start|jalali_datetime }}</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'session_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-info-circle"></i> اطلاعات جلسه</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="text-muted small">مراجع</div>
+                        <div class="fw-bold">{{ session.client.full_name }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small">مشاور</div>
+                        <div class="fw-bold">{{ session.consultant.get_full_name }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">زمان</div>
+                        <div>{{ session.scheduled_start|jalali_datetime }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">اتاق</div>
+                        <div>{{ session.room.name|default:"—" }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">نوع</div>
+                        <div>{{ session.get_session_type_display }}</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-muted small">وضعیت</div>
+                        <div>{{ session.get_status_display }}</div>
+                    </div>
+                    {% if session.actual_duration_minutes %}
+                    <div class="col-md-4">
+                        <div class="text-muted small">مدت واقعی</div>
+                        <div>{{ session.actual_duration_minutes|pnum }} دقیقه</div>
+                    </div>
+                    {% endif %}
+                    {% if session.final_fee %}
+                    <div class="col-md-4">
+                        <div class="text-muted small">مبلغ</div>
+                        <div class="fw-bold">{{ session.final_fee|pnum }} تومان</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

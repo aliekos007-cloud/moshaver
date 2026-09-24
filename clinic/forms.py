@@ -1,5 +1,6 @@
 from django import forms
-from .models import ClinicSettings, Room
+from django.utils import timezone
+from .models import ClinicSettings, Room, ConsultantDailyPresence
 
 
 class ClinicSettingsForm(forms.ModelForm):
@@ -58,3 +59,94 @@ class RoomForm(forms.ModelForm):
             "equipment": "تجهیزات",
             "is_active": "فعال",
         }
+
+
+# ==================================================
+# فرم ثبت حضور مشاور
+# ==================================================
+
+class PresenceRegisterForm(forms.Form):
+    """ثبت حضور مشاور — صبح که می‌رسد."""
+
+    consultant = forms.ModelChoiceField(
+        label="مشاور",
+        queryset=None,
+        empty_label="— انتخاب کنید —",
+        widget=forms.Select(attrs={
+            "class": "form-select form-select-lg",
+        }),
+        error_messages={
+            "required": "انتخاب مشاور الزامی است.",
+            "invalid_choice": "مشاور انتخاب‌شده معتبر نیست.",
+        },
+    )
+
+    room = forms.ModelChoiceField(
+        label="اتاق فعلی",
+        queryset=None,
+        empty_label="— بدون اتاق —",
+        required=False,
+        widget=forms.Select(attrs={
+            "class": "form-select form-select-lg",
+        }),
+    )
+
+    note = forms.CharField(
+        label="یادداشت",
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "مثلاً: ساعت خروج ۱۲، جلسهٔ فوق‌برنامه",
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        from accounts.models import User, Role
+        super().__init__(*args, **kwargs)
+
+        today = timezone.localdate()
+
+        # مشاورانی که امروز حضور ندارن
+        present_ids = ConsultantDailyPresence.objects.filter(
+            date=today,
+        ).values_list("consultant_id", flat=True)
+
+        self.fields["consultant"].queryset = User.objects.filter(
+            role=Role.CONSULTANT,
+            is_active=True,
+        ).exclude(id__in=present_ids).order_by("last_name", "first_name")
+
+        # اتاق‌های فعال
+        self.fields["room"].queryset = Room.objects.filter(is_active=True).order_by("order", "name")
+
+
+class ChangeRoomForm(forms.Form):
+    """تغییر اتاق — وسط روز."""
+
+    room = forms.ModelChoiceField(
+        label="اتاق جدید",
+        queryset=None,
+        empty_label="— بدون اتاق —",
+        required=False,
+        widget=forms.Select(attrs={
+            "class": "form-select form-select-lg",
+        }),
+    )
+
+    note = forms.CharField(
+        label="دلیل تغییر",
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "مثلاً: جلسهٔ گروهی، تغییر اتاق",
+        }),
+    )
+
+    def __init__(self, *args, **kwargs):
+        current_presence = kwargs.pop("current_presence", None)
+        super().__init__(*args, **kwargs)
+
+        qs = Room.objects.filter(is_active=True).order_by("order", "name")
+        if current_presence and current_presence.room_id:
+            qs = qs.exclude(id=current_presence.room_id)
+        self.fields["room"].queryset = qs

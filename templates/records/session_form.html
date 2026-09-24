@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+
+{% block title %}جلسهٔ جدید{% endblock %}
+
+{% block header %}<i class="bi bi-calendar-plus"></i> جلسهٔ جدید{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'session_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid var(--primary);
+    }
+    .form-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .form-section-title i { color: var(--primary); }
+    .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        <form method="post" novalidate id="session-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-people"></i> افراد
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">مراجع <span class="required-star">*</span></label>
+                        {{ form.client }}
+                        {% if form.client.errors %}<div class="text-danger small mt-1">{{ form.client.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">مشاور <span class="required-star">*</span></label>
+                        {{ form.consultant }}
+                        {% if form.consultant.errors %}<div class="text-danger small mt-1">{{ form.consultant.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-calendar-check"></i> زمان و مکان
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">تاریخ <span class="required-star">*</span></label>
+                        {{ form.scheduled_date }}
+                        {% if form.scheduled_date.errors %}<div class="text-danger small mt-1">{{ form.scheduled_date.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">ساعت شروع <span class="required-star">*</span></label>
+                        {{ form.scheduled_time }}
+                        {% if form.scheduled_time.errors %}<div class="text-danger small mt-1">{{ form.scheduled_time.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">مدت (دقیقه) <span class="required-star">*</span></label>
+                        {{ form.duration_minutes }}
+                        {% if form.duration_minutes.errors %}<div class="text-danger small mt-1">{{ form.duration_minutes.errors.0 }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">اتاق</label>
+                        {{ form.room }}
+                        {% if form.room.errors %}<div class="text-danger small mt-1">{{ form.room.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">نوع جلسه</label>
+                        {{ form.session_type }}
+                        {% if form.session_type.errors %}<div class="text-danger small mt-1">{{ form.session_type.errors.0 }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-sticky"></i> یادداشت
+                </div>
+                {{ form.secretary_note }}
+                {% if form.secretary_note.errors %}<div class="text-danger small mt-1">{{ form.secretary_note.errors.0 }}</div>{% endif %}
+            </div>
+
+            <hr class="my-4">
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> ساخت جلسه
+                </button>
+                <a href="{% url 'session_list' %}" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

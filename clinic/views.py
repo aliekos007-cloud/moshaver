@@ -3,12 +3,20 @@ import json
 from django.contrib import messages
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from accounts.decorators import medical_edit_required
 from audit.models import log_action
-from .models import ClinicSettings, Room
-from .forms import ClinicSettingsForm, RoomForm
+from .models import (
+    ClinicSettings, Room,
+    ConsultantDailyPresence, ConsultantRoomChange,
+)
+from .forms import (
+    ClinicSettingsForm, RoomForm,
+    PresenceRegisterForm, ChangeRoomForm,
+)
 
 
 # ==================================================
@@ -39,17 +47,14 @@ def _can_manage_rooms(user):
 
 
 def room_list(request):
-    """لیست اتاق‌ها به‌صورت گرید."""
     if not _can_manage_rooms(request.user):
         messages.error(request, "دسترسی مجاز نیست.")
         return redirect("dashboard")
 
     rooms = Room.objects.all().order_by("order", "id")
 
-    # آماده‌سازی اطلاعات هر اتاق
     rooms_data = []
     for room in rooms:
-        # جلسهٔ فعال فعلی این اتاق (اگر Session داریم)
         current_session = None
         try:
             from records.models import Session
@@ -73,7 +78,6 @@ def room_list(request):
 
 
 def room_create(request):
-    """ساخت اتاق جدید."""
     if not _can_manage_rooms(request.user):
         messages.error(request, "دسترسی مجاز نیست.")
         return redirect("dashboard")
@@ -96,7 +100,6 @@ def room_create(request):
 
 
 def room_edit(request, pk):
-    """ویرایش اتاق."""
     if not _can_manage_rooms(request.user):
         messages.error(request, "دسترسی مجاز نیست.")
         return redirect("dashboard")
@@ -122,7 +125,6 @@ def room_edit(request, pk):
 
 
 def room_toggle(request, pk):
-    """فعال/غیرفعال کردن اتاق."""
     if not _can_manage_rooms(request.user):
         messages.error(request, "دسترسی مجاز نیست.")
         return redirect("dashboard")
@@ -138,7 +140,6 @@ def room_toggle(request, pk):
 
 
 def room_delete(request, pk):
-    """حذف اتاق."""
     if not _can_manage_rooms(request.user):
         messages.error(request, "دسترسی مجاز نیست.")
         return redirect("dashboard")
@@ -165,7 +166,6 @@ def room_delete(request, pk):
 
 @require_POST
 def room_reorder(request):
-    """ذخیرهٔ ترتیب جدید اتاق‌ها (AJAX)."""
     if not _can_manage_rooms(request.user):
         return JsonResponse({"ok": False, "error": "دسترسی مجاز نیست."}, status=403)
 
@@ -180,8 +180,200 @@ def room_reorder(request):
         count = Room.objects.filter(pk=room_id).update(order=idx)
         updated += count
 
-    log_action(
-        request, "update", None,
-        description=f"تنظیم ترتیب {updated} اتاق",
-    )
+    log_action(request, "update", None, description=f"تنظیم ترتیب {updated} اتاق")
     return JsonResponse({"ok": True, "updated": updated})
+
+
+# ==================================================
+# مدیریت حضور مشاور
+# ==================================================
+
+def _can_manage_presence(user):
+    return user.is_authenticated and user.role in ("manager", "secretary")
+
+
+def presence_list(request):
+    """لیست حضور امروز."""
+    if not _can_manage_presence(request.user):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    today = timezone.localdate()
+
+    presences = ConsultantDailyPresence.objects.filter(
+        date=today,
+    ).select_related("consultant", "room").order_by("arrived_at")
+
+    # مشاوران بدون حضور
+    from accounts.models import User, Role
+    present_ids = presences.values_list("consultant_id", flat=True)
+    absent_consultants = User.objects.filter(
+        role=Role.CONSULTANT,
+        is_active=True,
+    ).exclude(id__in=present_ids).order_by("last_name", "first_name")
+
+    # آمار
+    total_consultants = User.objects.filter(role=Role.CONSULTANT, is_active=True).count()
+    present_count = presences.count()
+
+    return render(request, "clinic/presence_list.html", {
+        "today": today,
+        "presences": presences,
+        "absent_consultants": absent_consultants,
+        "total_consultants": total_consultants,
+        "present_count": present_count,
+    })
+
+
+def presence_register(request):
+    """ثبت حضور مشاور جدید."""
+    if not _can_manage_presence(request.user):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    if request.method == "POST":
+        form = PresenceRegisterForm(request.POST)
+        if form.is_valid():
+            consultant = form.cleaned_data["consultant"]
+            room = form.cleaned_data.get("room")
+            note = form.cleaned_data.get("note", "")
+
+            presence = ConsultantDailyPresence.objects.create(
+                consultant=consultant,
+                date=timezone.localdate(),
+                room=room,
+                arrived_at=timezone.now(),
+                status="present",
+                note=note,
+            )
+
+            log_action(
+                request, "create", presence,
+                description=f"ثبت حضور: {consultant.get_full_name()} — اتاق {room.name if room else 'بدون اتاق'}",
+            )
+
+            messages.success(
+                request,
+                f"حضور «{consultant.get_full_name()}» با موفقیت ثبت شد."
+            )
+            return redirect("presence_list")
+    else:
+        form = PresenceRegisterForm()
+
+    return render(request, "clinic/presence_register.html", {"form": form})
+
+
+def presence_change_room(request, pk):
+    """تغییر اتاق مشاور."""
+    if not _can_manage_presence(request.user):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    presence = get_object_or_404(
+        ConsultantDailyPresence.objects.select_related("consultant", "room"),
+        pk=pk,
+    )
+
+    if request.method == "POST":
+        form = ChangeRoomForm(request.POST, current_presence=presence)
+        if form.is_valid():
+            old_room = presence.room
+            new_room = form.cleaned_data.get("room")
+            note = form.cleaned_data.get("note", "")
+
+            # ثبت تاریخچه
+            ConsultantRoomChange.objects.create(
+                consultant=presence.consultant,
+                date=presence.date,
+                from_room=old_room,
+                to_room=new_room,
+                changed_at=timezone.now(),
+                changed_by=request.user,
+                note=note,
+            )
+
+            presence.room = new_room
+            presence.save()
+
+            log_action(
+                request, "update", presence,
+                description=f"تغییر اتاق {presence.consultant.get_full_name()}: "
+                            f"{old_room.name if old_room else '—'} → {new_room.name if new_room else '—'}",
+            )
+
+            messages.success(
+                request,
+                f"اتاق «{presence.consultant.get_full_name()}» به «{new_room.name if new_room else 'بدون اتاق'}» تغییر یافت."
+            )
+            return redirect("presence_list")
+    else:
+        form = ChangeRoomForm(current_presence=presence)
+
+    return render(request, "clinic/presence_change_room.html", {
+        "form": form,
+        "presence": presence,
+    })
+
+
+@require_POST
+def presence_checkout(request, pk):
+    """ثبت خروج مشاور از مرکز."""
+    if not _can_manage_presence(request.user):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    presence = get_object_or_404(ConsultantDailyPresence, pk=pk)
+
+    # چک جلسهٔ فعال
+    from records.models import Session
+    active = Session.objects.filter(
+        consultant=presence.consultant,
+        status__in=["in_progress", "paused"],
+    ).exists()
+
+    if active:
+        messages.error(
+            request,
+            f"«{presence.consultant.get_full_name()}» جلسهٔ فعال دارد. "
+            "ابتدا جلسه را ببندید."
+        )
+        return redirect("presence_list")
+
+    presence.left_at = timezone.now()
+    presence.status = "left"
+    presence.save()
+
+    log_action(
+        request, "update", presence,
+        description=f"ثبت خروج: {presence.consultant.get_full_name()}",
+    )
+    messages.success(
+        request,
+        f"خروج «{presence.consultant.get_full_name()}» ثبت شد."
+    )
+    return redirect("presence_list")
+
+
+@require_POST
+def presence_toggle_break(request, pk):
+    """استراحت / بازگشت از استراحت."""
+    if not _can_manage_presence(request.user):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    presence = get_object_or_404(ConsultantDailyPresence, pk=pk)
+
+    if presence.status == "on_break":
+        presence.status = "present"
+        msg = "بازگشت از استراحت"
+    elif presence.status in ("present", "in_session"):
+        presence.status = "on_break"
+        msg = "شروع استراحت"
+    else:
+        messages.error(request, "وضعیت فعلی قابل تغییر نیست.")
+        return redirect("presence_list")
+
+    presence.save()
+    log_action(request, "update", presence, description=f"{msg}: {presence.consultant.get_full_name()}")
+    messages.success(request, f"{msg} «{presence.consultant.get_full_name()}» ثبت شد.")
+    return redirect("presence_list")

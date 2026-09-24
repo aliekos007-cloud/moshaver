@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}حضور مشاوران{% endblock %}
+
+{% block header %}<i class="bi bi-person-check"></i> حضور مشاوران{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ today|jalali_full }} — {{ present_count|pnum }} از {{ total_consultants|pnum }} مشاور حاضر</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'presence_register' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> ثبت حضور مشاور
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .presence-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+
+    .presence-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-right: 5px solid #10b981;
+        transition: all .25s;
+    }
+
+    .presence-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .presence-card[data-status="in_session"] {
+        border-right-color: #f59e0b;
+    }
+    .presence-card[data-status="on_break"] {
+        border-right-color: #8b5cf6;
+        background: linear-gradient(135deg, #ffffff, #faf5ff);
+    }
+    .presence-card[data-status="left"] {
+        border-right-color: #94a3b8;
+        opacity: 0.7;
+    }
+
+    .presence-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .presence-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .presence-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #06b6d4, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+
+    .presence-status {
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+        padding: .3rem .7rem;
+        border-radius: 999px;
+        font-size: .72rem;
+        font-weight: 600;
+    }
+    .presence-status.present { background: rgba(16,185,129,0.12); color: #059669; }
+    .presence-status.in_session { background: rgba(245,158,11,0.12); color: #d97706; }
+    .presence-status.on_break { background: rgba(139,92,246,0.12); color: #7c3aed; }
+    .presence-status.left { background: rgba(100,116,139,0.12); color: #475569; }
+
+    .presence-status .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    .presence-status.in_session .dot {
+        animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .presence-info {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        font-size: .82rem;
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+
+    .presence-info-item {
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .presence-info-item i {
+        color: #94a3b8;
+        width: 18px;
+    }
+
+    .presence-info-item strong {
+        color: #0f172a;
+    }
+
+    .presence-room-badge {
+        background: #f1f5f9;
+        padding: .25rem .6rem;
+        border-radius: 8px;
+        font-weight: 600;
+        color: #475569;
+        font-size: .75rem;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
+    }
+
+    .presence-actions {
+        display: flex;
+        gap: .4rem;
+        padding-top: .75rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .presence-actions .btn {
+        font-size: .75rem;
+        padding: .35rem .6rem;
+        flex: 1;
+        justify-content: center;
+    }
+
+    .absent-section {
+        margin-top: 2rem;
+    }
+
+    .absent-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: .5rem;
+    }
+
+    .absent-chip {
+        background: #f8fafc;
+        border: 1px dashed #cbd5e1;
+        padding: .5rem .9rem;
+        border-radius: 999px;
+        font-size: .82rem;
+        color: #64748b;
+        display: inline-flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .absent-chip i { color: #94a3b8; }
+
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-box {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-right: 4px solid #2563eb;
+    }
+    .stat-box.green { border-right-color: #10b981; }
+    .stat-box.orange { border-right-color: #f59e0b; }
+    .stat-box.purple { border-right-color: #8b5cf6; }
+
+    .stat-box .value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .stat-box .label {
+        font-size: .78rem;
+        color: #64748b;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ============ آمار ============ -->
+<div class="stats-bar">
+    <div class="stat-box green">
+        <div class="value">{{ present_count|pnum }}</div>
+        <div class="label">حاضر</div>
+    </div>
+    <div class="stat-box">
+        <div class="value">{{ total_consultants|pnum }}</div>
+        <div class="label">کل مشاوران</div>
+    </div>
+    <div class="stat-box orange">
+        <div class="value">{{ absent_consultants|length|pnum }}</div>
+        <div class="label">غایب</div>
+    </div>
+</div>
+
+<!-- ============ حاضرین ============ -->
+{% if presences %}
+<div class="presence-grid">
+    {% for p in presences %}
+    <div class="presence-card" data-status="{{ p.status }}">
+        <div class="presence-header">
+            <div class="d-flex align-items-center gap-2">
+                <div class="presence-avatar">{{ p.consultant.first_name|first }}</div>
+                <div>
+                    <h3 class="presence-name">{{ p.consultant.get_full_name }}</h3>
+                    {% if p.consultant.consultant_level %}
+                        <span class="small text-muted">{{ p.consultant.consultant_level.name }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <span class="presence-status {{ p.status }}">
+                <span class="dot"></span>
+                {{ p.get_status_display }}
+            </span>
+        </div>
+
+        <div class="presence-info">
+            <div class="presence-info-item">
+                <i class="bi bi-door-open"></i>
+                {% if p.room %}
+                    <span class="presence-room-badge">
+                        <i class="bi bi-geo-alt-fill"></i> {{ p.room.name }}
+                    </span>
+                {% else %}
+                    <span class="text-muted">بدون اتاق</span>
+                {% endif %}
+            </div>
+            <div class="presence-info-item">
+                <i class="bi bi-box-arrow-in-right"></i>
+                ورود: <strong>{{ p.arrived_at|jalali_time }}</strong>
+            </div>
+            {% if p.left_at %}
+            <div class="presence-info-item">
+                <i class="bi bi-box-arrow-right"></i>
+                خروج: <strong>{{ p.left_at|jalali_time }}</strong>
+            </div>
+            {% endif %}
+            {% if p.note %}
+            <div class="presence-info-item">
+                <i class="bi bi-sticky"></i>
+                <span class="small">{{ p.note }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="presence-actions">
+            {% if p.status != "left" %}
+                <a href="{% url 'presence_change_room' p.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left-right"></i> تغییر اتاق
+                </a>
+                <form method="post" action="{% url 'presence_toggle_break' p.pk %}" class="d-inline-flex flex-fill">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-warning w-100">
+                        {% if p.status == "on_break" %}
+                            <i class="bi bi-play-fill"></i> بازگشت
+                        {% else %}
+                            <i class="bi bi-cup-hot"></i> استراحت
+                        {% endif %}
+                    </button>
+                </form>
+                <form method="post" action="{% url 'presence_checkout' p.pk %}" class="d-inline-flex"
+                      onsubmit="return confirm('خروج {{ p.consultant.get_full_name }} را ثبت می‌کنید؟');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger" title="ثبت خروج">
+                        <i class="bi bi-box-arrow-right"></i>
+                    </button>
+                </form>
+            {% else %}
+                <div class="text-muted small w-100 text-center py-2">
+                    <i class="bi bi-check2-circle"></i> این مشاور مرکز را ترک کرده است
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="bi bi-person-x"></i>
+        <div class="mb-3">هنوز هیچ مشاوری امروز حضور خود را ثبت نکرده است.</div>
+        <a href="{% url 'presence_register' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> ثبت اولین حضور
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<!-- ============ غایبین ============ -->
+{% if absent_consultants %}
+<div class="absent-section">
+    <h6 class="mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-person-dash text-muted"></i>
+        مشاوران غایب امروز
+        <span class="badge bg-secondary">{{ absent_consultants|length|pnum }}</span>
+    </h6>
+    <div class="absent-list">
+        {% for c in absent_consultants %}
+        <span class="absent-chip">
+            <i class="bi bi-person"></i>
+            {{ c.get_full_name }}
+            {% if c.consultant_level %}
+                <span class="text-muted small">— {{ c.consultant_level.name }}</span>
+            {% endif %}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

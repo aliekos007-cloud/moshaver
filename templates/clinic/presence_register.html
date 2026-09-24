@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}ثبت حضور مشاور{% endblock %}
+
+{% block header %}<i class="bi bi-person-plus"></i> ثبت حضور مشاور{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'presence_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            مشاور <span class="required-star">*</span>
+                        </label>
+                        {{ form.consultant }}
+                        {% if form.consultant.errors %}
+                            <div class="text-danger small mt-1">{{ form.consultant.errors }}</div>
+                        {% endif %}
+                        {% if not form.consultant.field.queryset.exists %}
+                            <div class="alert alert-info small mt-2">
+                                <i class="bi bi-info-circle"></i>
+                                همهٔ مشاوران امروز حضور خود را ثبت کرده‌اند.
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">اتاق فعلی</label>
+                        {{ form.room }}
+                        {% if form.room.errors %}
+                            <div class="text-danger small mt-1">{{ form.room.errors }}</div>
+                        {% endif %}
+                        <div class="small text-muted mt-1">
+                            می‌توانید بدون اتاق هم ثبت کنید و بعداً تغییر دهید.
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">یادداشت</label>
+                        {{ form.note }}
+                        {% if form.note.errors %}
+                            <div class="text-danger small mt-1">{{ form.note.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> ثبت حضور
+                        </button>
+                        <a href="{% url 'presence_list' %}" class="btn btn-outline-secondary btn-lg">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
