@@ -1,0 +1,522 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}<i class="bi bi-award"></i> {{ title }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultant_level_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid var(--primary);
+    }
+
+    .form-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: .35rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .form-section-title i { color: var(--primary); }
+
+    .form-section-desc {
+        font-size: .78rem;
+        color: #64748b;
+        margin-bottom: 1rem;
+    }
+
+    .status-section {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        border-right: 3px solid #10b981;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .status-section.inactive {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-right-color: #94a3b8;
+    }
+
+    .status-section-text { flex: 1; }
+
+    .status-section-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #065f46;
+        margin-bottom: .2rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .status-section.inactive .status-section-title { color: #475569; }
+
+    .status-section-desc {
+        font-size: .78rem;
+        color: #10b981;
+    }
+
+    .status-section.inactive .status-section-desc { color: #94a3b8; }
+
+    .status-toggle {
+        position: relative;
+        display: inline-block;
+        width: 56px;
+        height: 32px;
+        flex-shrink: 0;
+    }
+
+    .status-toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .status-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #cbd5e1;
+        transition: .3s;
+        border-radius: 32px;
+    }
+
+    .status-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 24px;
+        width: 24px;
+        right: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .3s;
+        border-radius: 50%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+
+    .status-toggle input:checked + .status-toggle-slider { background-color: #10b981; }
+    .status-toggle input:checked + .status-toggle-slider:before { transform: translateX(-24px); }
+
+    .price-preview {
+        background: linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-top: 1.25rem;
+        border: 2px dashed #cbd5e1;
+    }
+
+    .price-preview-title {
+        font-size: .8rem;
+        color: #64748b;
+        margin-bottom: .75rem;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .price-preview-table {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+    }
+
+    .price-preview-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: .85rem;
+        padding: .35rem 0;
+        border-bottom: 1px dashed #e2e8f0;
+    }
+
+    .price-preview-row:last-child {
+        border-bottom: none;
+        padding-top: .65rem;
+        margin-top: .35rem;
+        border-top: 2px solid #cbd5e1;
+        font-weight: 700;
+        font-size: .95rem;
+    }
+
+    .price-preview-row .label { color: #64748b; }
+    .price-preview-row .value { color: #0f172a; font-weight: 600; }
+
+    .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
+
+    /* اعداد فارسی در input ها */
+    .persian-number {
+        font-family: 'Vazirmatn', tahoma, sans-serif;
+        letter-spacing: .5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if form.non_field_errors %}
+    <div class="alert alert-danger">
+        {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+    </div>
+{% endif %}
+
+<form method="post" novalidate id="level-form">
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+
+            <div class="status-section {% if not form.is_active.value %}inactive{% endif %}" id="status-section">
+                <div class="status-section-text">
+                    <div class="status-section-title">
+                        <i class="bi bi-power"></i>
+                        وضعیت سطح مشاور
+                    </div>
+                    <div class="status-section-desc" id="status-desc">
+                        {% if form.is_active.value %}
+                            این سطح در فرم‌ها نمایش داده می‌شود و قابل انتخاب است
+                        {% else %}
+                            این سطح غیرفعال است و در فرم‌ها نمایش داده نمی‌شود
+                        {% endif %}
+                    </div>
+                </div>
+
+                <label class="status-toggle">
+                    {{ form.is_active }}
+                    <span class="status-toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-info-circle"></i> اطلاعات پایه
+                </div>
+                <div class="form-section-desc">
+                    نام سطح و رنگ نمایش آن در تایم‌لاین منشی.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">
+                            عنوان سطح <span class="required-star">*</span>
+                        </label>
+                        {{ form.name }}
+                        <div class="small text-muted mt-1">
+                            مثلاً: کارشناس، کارشناسی ارشد، دکتری، فوق‌تخصص
+                        </div>
+                        {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">رنگ</label>
+                        {{ form.color }}
+                        {% if form.color.errors %}<div class="text-danger small mt-1">{{ form.color.errors }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-cash-coin"></i> تعرفه‌گذاری
+                </div>
+                <div class="form-section-desc">
+                    مبلغ پایه برای زمان استاندارد، و هزینهٔ هر دقیقهٔ اضافه.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            زمان استاندارد (دقیقه) <span class="required-star">*</span>
+                        </label>
+                        {{ form.standard_minutes }}
+                        <div class="small text-muted mt-1">{{ form.standard_minutes.help_text }}</div>
+                        {% if form.standard_minutes.errors %}<div class="text-danger small mt-1">{{ form.standard_minutes.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            مبلغ پایه (تومان) <span class="required-star">*</span>
+                        </label>
+                        {{ form.base_price }}
+                        <div class="small text-muted mt-1">مبلغ کامل جلسهٔ استاندارد</div>
+                        {% if form.base_price.errors %}<div class="text-danger small mt-1">{{ form.base_price.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            هزینهٔ هر دقیقهٔ مازاد (تومان) <span class="required-star">*</span>
+                        </label>
+                        {{ form.overtime_per_minute }}
+                        <div class="small text-muted mt-1">بعد از پایان ارفاق حساب می‌شود</div>
+                        {% if form.overtime_per_minute.errors %}<div class="text-danger small mt-1">{{ form.overtime_per_minute.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">ارفاق (دقیقه)</label>
+                        {{ form.grace_minutes }}
+                        <div class="small text-muted mt-1">{{ form.grace_minutes.help_text }}</div>
+                        {% if form.grace_minutes.errors %}<div class="text-danger small mt-1">{{ form.grace_minutes.errors }}</div>{% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">رُند کردن (دقیقه)</label>
+                        {{ form.rounding_minutes }}
+                        <div class="small text-muted mt-1">{{ form.rounding_minutes.help_text }}</div>
+                        {% if form.rounding_minutes.errors %}<div class="text-danger small mt-1">{{ form.rounding_minutes.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">حداکثر زمان (دقیقه)</label>
+                        {{ form.max_minutes }}
+                        <div class="small text-muted mt-1">{{ form.max_minutes.help_text }}</div>
+                        {% if form.max_minutes.errors %}<div class="text-danger small mt-1">{{ form.max_minutes.errors }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-shield-check"></i> بیمه
+                </div>
+                <div class="form-section-desc">
+                    اگر مرکز شما با بیمه کار نمی‌کند، این بخش را خالی بگذارید.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">سهم بیمه (تومان)</label>
+                        {{ form.insurance_share }}
+                        <div class="small text-muted mt-1">{{ form.insurance_share.help_text }}</div>
+                        {% if form.insurance_share.errors %}<div class="text-danger small mt-1">{{ form.insurance_share.errors }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-calendar-range"></i> اعتبار زمانی
+                </div>
+                <div class="form-section-desc">
+                    از چه تاریخی این تعرفه معتبر است و تا چه تاریخی.
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">
+                            از تاریخ <span class="required-star">*</span>
+                        </label>
+                        {{ form.effective_from }}
+                        {% if form.effective_from.errors %}<div class="text-danger small mt-1">{{ form.effective_from.errors }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">تا تاریخ</label>
+                        {{ form.effective_to }}
+                        <div class="small text-muted mt-1">{{ form.effective_to.help_text }}</div>
+                        {% if form.effective_to.errors %}<div class="text-danger small mt-1">{{ form.effective_to.errors }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card" style="position: sticky; top: 20px;">
+                <div class="card-body">
+                    <h6 class="mb-3 d-flex align-items-center gap-2">
+                        <i class="bi bi-eye"></i> پیش‌نمایش محاسبه
+                    </h6>
+
+                    <div class="price-preview">
+                        <div class="price-preview-title">
+                            <i class="bi bi-calculator"></i>
+                            نمونهٔ محاسبه هزینه
+                        </div>
+                        <div class="price-preview-table" id="preview-table">
+                            <div class="price-preview-row">
+                                <span class="label">جلسهٔ استاندارد</span>
+                                <span class="value" id="pv-standard">—</span>
+                            </div>
+                            <div class="price-preview-row">
+                                <span class="label">جلسهٔ ۱ ساعت</span>
+                                <span class="value" id="pv-hour">—</span>
+                            </div>
+                            <div class="price-preview-row">
+                                <span class="label">جلسهٔ ۱ ساعت و ربع</span>
+                                <span class="value" id="pv-75">—</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info small mt-3 mb-0">
+                        <i class="bi bi-lightbulb"></i>
+                        <strong>نکته:</strong>
+                        این پیش‌نمایش بر اساس اعداد فعلی فرم است. با تغییر هر فیلد، خودکار بروز می‌شود.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <hr class="my-4">
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> ذخیره
+        </button>
+        <a href="{% url 'consultant_level_list' %}" class="btn btn-outline-secondary">انصراف</a>
+    </div>
+
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==================================================
+// تبدیل ارقام انگلیسی ↔ فارسی
+// ==================================================
+const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const EN_DIGITS = "0123456789";
+
+function toEnDigits(str) {
+    return String(str)
+        .replace(/[۰-۹]/g, d => EN_DIGITS[FA_DIGITS.indexOf(d)])
+        .replace(/[٠-٩]/g, d => EN_DIGITS["٠١٢٣٤٥٦٧٨٩".indexOf(d)]);
+}
+
+function toFaDigits(str) {
+    return String(str).replace(/\d/g, d => FA_DIGITS[d]);
+}
+
+function formatFaNumber(rawDigits) {
+    const cleaned = toEnDigits(rawDigits).replace(/[^\d]/g, "");
+    if (!cleaned) return "";
+    const n = Number(cleaned);
+    return toFaDigits(n.toLocaleString("en-US")).replace(/,/g, "٬");
+}
+
+// ==================================================
+// فرمت خودکار input های .persian-number
+// ==================================================
+function formatInput(input) {
+    const raw = toEnDigits(input.value).replace(/[^\d]/g, "");
+    if (!raw) {
+        input.value = "";
+        return;
+    }
+    input.value = formatFaNumber(raw);
+}
+
+document.querySelectorAll(".persian-number").forEach(input => {
+    // فرمت اولیه
+    if (input.value) formatInput(input);
+
+    // فرمت زنده هنگام تایپ
+    input.addEventListener("input", function() {
+        formatInput(this);
+        // کورسور بره آخر
+        const len = this.value.length;
+        this.setSelectionRange(len, len);
+    });
+});
+
+// ==================================================
+// قبل از submit، همه رو به انگلیسی تبدیل کن
+// ==================================================
+const form = document.getElementById("level-form");
+if (form) {
+    form.addEventListener("submit", function() {
+        form.querySelectorAll(".persian-number").forEach(input => {
+            const raw = toEnDigits(input.value).replace(/[^\d]/g, "");
+            input.value = raw || "0";
+        });
+    });
+}
+
+// ==================================================
+// پیش‌نمایش زندهٔ محاسبه
+// ==================================================
+const $ = (id) => document.getElementById(id);
+
+function faPrice(n) {
+    if (!n || isNaN(n)) return "—";
+    return formatFaNumber(String(n)) + " تومان";
+}
+
+function getNumValue(id) {
+    const el = $(id);
+    if (!el) return 0;
+    const raw = toEnDigits(el.value).replace(/[^\d]/g, "");
+    return parseInt(raw) || 0;
+}
+
+function calcFee(totalMinutes, standard, basePrice, overtime, grace, rounding) {
+    if (totalMinutes <= standard + grace) return basePrice;
+    let overage = totalMinutes - standard - grace;
+    if (rounding > 0) {
+        overage = Math.ceil(overage / rounding) * rounding;
+    }
+    return basePrice + (overage * overtime);
+}
+
+function updatePreview() {
+    const standard = getNumValue("id_standard_minutes");
+    const basePrice = getNumValue("id_base_price");
+    const overtime = getNumValue("id_overtime_per_minute");
+    const grace = getNumValue("id_grace_minutes");
+    const rounding = getNumValue("id_rounding_minutes");
+
+    if (!standard || !basePrice) {
+        $("pv-standard").textContent = "—";
+        $("pv-hour").textContent = "—";
+        $("pv-75").textContent = "—";
+        return;
+    }
+
+    $("pv-standard").textContent = faPrice(calcFee(standard, standard, basePrice, overtime, grace, rounding));
+    $("pv-hour").textContent = faPrice(calcFee(60, standard, basePrice, overtime, grace, rounding));
+    $("pv-75").textContent = faPrice(calcFee(75, standard, basePrice, overtime, grace, rounding));
+}
+
+["id_standard_minutes", "id_base_price", "id_overtime_per_minute", "id_grace_minutes", "id_rounding_minutes"].forEach(id => {
+    const el = $(id);
+    if (el) {
+        el.addEventListener("input", updatePreview);
+        el.addEventListener("change", updatePreview);
+    }
+});
+
+updatePreview();
+
+// ==================================================
+// سوئیچ وضعیت
+// ==================================================
+const activeCheckbox = $("id_is_active");
+const statusSection = $("status-section");
+const statusDesc = $("status-desc");
+
+if (activeCheckbox && statusSection) {
+    activeCheckbox.addEventListener("change", function() {
+        if (this.checked) {
+            statusSection.classList.remove("inactive");
+            statusDesc.textContent = "این سطح در فرم‌ها نمایش داده می‌شود و قابل انتخاب است";
+        } else {
+            statusSection.classList.add("inactive");
+            statusDesc.textContent = "این سطح غیرفعال است و در فرم‌ها نمایش داده نمی‌شود";
+        }
+    });
+}
+</script>
+{% endblock %}

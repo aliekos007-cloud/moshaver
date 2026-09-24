@@ -74,23 +74,36 @@ class ClinicSettings(models.Model):
 class Room(models.Model):
     """اتاق‌های مشاوره — چون اتاق‌ها چرخشی هستند."""
     name = models.CharField("نام اتاق", max_length=50)
-    code = models.SlugField("کد", unique=True)
+    code = models.SlugField(
+        "کد داخلی", max_length=50, unique=True,
+        blank=True, editable=False,
+    )
     capacity = models.PositiveIntegerField("ظرفیت", default=1)
-    color = models.CharField("رنگ در تایم‌لاین", max_length=7, default="#06b6d4")
+    color = models.CharField("رنگ", max_length=7, default="#06b6d4")
     equipment = models.TextField(
         "تجهیزات", blank=True,
         help_text="مثلاً: پروژکتور، مبل راحتی، میز بازی‌درمانی",
     )
-    order = models.PositiveIntegerField("ترتیب نمایش", default=0)
+    order = models.PositiveIntegerField("ترتیب", default=0, db_index=True)
     is_active = models.BooleanField("فعال", default=True)
 
     class Meta:
         verbose_name = "اتاق"
         verbose_name_plural = "اتاق‌ها"
-        ordering = ["order", "name"]
+        ordering = ["order", "id"]
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        if is_new and not self.order:
+            last = Room.objects.order_by("-order").values_list("order", flat=True).first()
+            self.order = (last or 0) + 1
+        super().save(*args, **kwargs)
+        if is_new and not self.code:
+            self.code = f"room-{self.pk}"
+            Room.objects.filter(pk=self.pk).update(code=self.code)
 
 
 # ==================================================

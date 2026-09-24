@@ -1,0 +1,402 @@
+{% extends "base.html" %}
+
+{% block title %}اتاق‌ها{% endblock %}
+
+{% block header %}<i class="bi bi-door-open"></i> اتاق‌ها{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ total }} اتاق ثبت شده — {{ rooms_data|length }} مورد نمایش</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<button id="btn-sort" class="btn btn-outline-primary" onclick="toggleSortMode()">
+    <i class="bi bi-arrows-move"></i> تنظیم ترتیب
+</button>
+<button id="btn-save-order" class="btn btn-success d-none" onclick="saveOrder()">
+    <i class="bi bi-check-circle"></i> ذخیرهٔ ترتیب
+</button>
+<button id="btn-cancel-order" class="btn btn-outline-secondary d-none" onclick="cancelSort()">
+    انصراف
+</button>
+<a href="{% url 'room_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> اتاق جدید
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+    }
+
+    .room-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        border-top: 4px solid #cbd5e1;
+        transition: all .25s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-height: 180px;
+    }
+
+    .room-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .room-card[data-active="true"] { border-top-color: var(--primary); }
+    .room-card[data-active="false"] {
+        opacity: 0.55;
+        border-top-color: #cbd5e1;
+        filter: grayscale(0.5);
+    }
+
+    .room-card[data-occupied="true"] {
+        border-top-color: #10b981;
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    }
+
+    .room-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: .75rem;
+    }
+
+    .room-name {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .room-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 4px;
+        flex-shrink: 0;
+    }
+
+    .room-status-badge {
+        font-size: .68rem;
+        padding: .2rem .6rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+    .room-status-badge.free { background: rgba(16,185,129,0.12); color: #10b981; }
+    .room-status-badge.busy { background: rgba(245,158,11,0.12); color: #d97706; }
+    .room-status-badge.off  { background: rgba(100,116,139,0.12); color: #64748b; }
+
+    .room-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        font-size: .82rem;
+        color: #64748b;
+    }
+
+    .room-info-row {
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    .room-info-row i { color: #94a3b8; width: 16px; }
+
+    .room-current {
+        background: #f0fdf4;
+        border-right: 3px solid #10b981;
+        padding: .5rem .7rem;
+        border-radius: 8px;
+        margin-top: .5rem;
+    }
+    .room-current .name {
+        font-weight: 600;
+        color: #065f46;
+        font-size: .82rem;
+    }
+    .room-current .sub {
+        font-size: .72rem;
+        color: #10b981;
+    }
+
+    .room-actions {
+        display: flex;
+        gap: .4rem;
+        margin-top: 1rem;
+        padding-top: .75rem;
+        border-top: 1px solid #f1f5f9;
+    }
+    .room-actions .btn { font-size: .75rem; padding: .3rem .6rem; flex: 1; justify-content: center; }
+
+    /* ===== حالت Sort ===== */
+    .rooms-grid.sort-mode .room-card {
+        cursor: grab;
+        border: 2px dashed #cbd5e1;
+        border-top-width: 2px;
+    }
+    .rooms-grid.sort-mode .room-card:active { cursor: grabbing; }
+    .rooms-grid.sort-mode .room-card .room-actions { display: none; }
+    .rooms-grid.sort-mode .room-card::before {
+        content: "⋮⋮";
+        position: absolute;
+        top: 50%;
+        right: -12px;
+        transform: translateY(-50%);
+        font-size: 1.2rem;
+        color: #94a3b8;
+        letter-spacing: -3px;
+        line-height: 1;
+    }
+
+    .room-card.dragging {
+        opacity: 0.4;
+        transform: scale(0.95);
+    }
+
+    .room-card.drag-over {
+        border-color: var(--primary);
+        background: rgba(37, 99, 235, 0.05);
+    }
+
+    .sort-hint {
+        background: #fef3c7;
+        border-right: 4px solid #f59e0b;
+        padding: .75rem 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        font-size: .85rem;
+        color: #92400e;
+        display: none;
+    }
+    .sort-hint.active { display: block; }
+
+    .empty-state-rooms {
+        background: #fff;
+        border-radius: 16px;
+        padding: 3rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="sort-hint" id="sort-hint">
+    <i class="bi bi-info-circle"></i>
+    <strong>حالت تنظیم ترتیب:</strong> کارت‌ها رو با موس بکش و جابه‌جا کن. بعد دکمهٔ «ذخیرهٔ ترتیب» رو بزن.
+</div>
+
+{% if rooms_data %}
+<div class="rooms-grid" id="rooms-grid">
+    {% for item in rooms_data %}
+        {% with room=item.room %}
+        <div class="room-card"
+             data-room-id="{{ room.id }}"
+             data-active="{{ room.is_active|yesno:'true,false' }}"
+             data-occupied="{{ item.is_occupied|yesno:'true,false' }}"
+             draggable="false">
+
+            <div class="room-header">
+                <h3 class="room-name">
+                    <span class="room-color" style="background:{{ room.color }};"></span>
+                    {{ room.name }}
+                </h3>
+                {% if not room.is_active %}
+                    <span class="room-status-badge off">غیرفعال</span>
+                {% elif item.is_occupied %}
+                    <span class="room-status-badge busy">در جلسه</span>
+                {% else %}
+                    <span class="room-status-badge free">آزاد</span>
+                {% endif %}
+            </div>
+
+            <div class="room-body">
+                <div class="room-info-row">
+                    <i class="bi bi-people"></i>
+                    <span>ظرفیت: {{ room.capacity }} نفر</span>
+                </div>
+
+                {% if room.equipment %}
+                <div class="room-info-row">
+                    <i class="bi bi-tools"></i>
+                    <span>{{ room.equipment|truncatechars:40 }}</span>
+                </div>
+                {% endif %}
+
+                {% if item.current_session %}
+                <div class="room-current">
+                    <div class="name">{{ item.current_session.consultant.get_full_name }}</div>
+                    <div class="sub">{{ item.current_session.client.full_name }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="room-actions">
+                <a href="{% url 'room_edit' room.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-pencil"></i> ویرایش
+                </a>
+                <form method="post" action="{% url 'room_toggle' room.pk %}" class="d-inline-flex" style="flex:1;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-secondary w-100" title="فعال/غیرفعال">
+                        {% if room.is_active %}
+                            <i class="bi bi-toggle-on"></i>
+                        {% else %}
+                            <i class="bi bi-toggle-off"></i>
+                        {% endif %}
+                    </button>
+                </form>
+                <a href="{% url 'room_delete' room.pk %}" class="btn btn-outline-danger">
+                    <i class="bi bi-trash"></i>
+                </a>
+            </div>
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state-rooms">
+    <i class="bi bi-door-closed" style="font-size:3rem;"></i>
+    <div class="mt-3 mb-3">هنوز هیچ اتاقی ثبت نشده است.</div>
+    <a href="{% url 'room_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> ساخت اولین اتاق
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==================================================
+// حالت تنظیم ترتیب
+// ==================================================
+let sortMode = false;
+let dragSrcEl = null;
+
+const grid = document.getElementById('rooms-grid');
+const btnSort = document.getElementById('btn-sort');
+const btnSave = document.getElementById('btn-save-order');
+const btnCancel = document.getElementById('btn-cancel-order');
+const sortHint = document.getElementById('sort-hint');
+
+function toggleSortMode() {
+    if (!grid) return;
+    sortMode = true;
+    grid.classList.add('sort-mode');
+    sortHint.classList.add('active');
+    btnSort.classList.add('d-none');
+    btnSave.classList.remove('d-none');
+    btnCancel.classList.remove('d-none');
+
+    // فعال‌سازی drag روی همه کارت‌ها
+    grid.querySelectorAll('.room-card').forEach(card => {
+        card.setAttribute('draggable', 'true');
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragover', handleDragOver);
+        card.addEventListener('dragleave', handleDragLeave);
+        card.addEventListener('drop', handleDrop);
+        card.addEventListener('dragend', handleDragEnd);
+    });
+}
+
+function cancelSort() {
+    location.reload();
+}
+
+function handleDragStart(e) {
+    dragSrcEl = this;
+    this.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', this.outerHTML);
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (this !== dragSrcEl) {
+        this.classList.add('drag-over');
+    }
+}
+
+function handleDragLeave(e) {
+    this.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.classList.remove('drag-over');
+
+    if (dragSrcEl !== this) {
+        // جابه‌جایی در DOM
+        const allCards = [...grid.querySelectorAll('.room-card')];
+        const srcIdx = allCards.indexOf(dragSrcEl);
+        const dstIdx = allCards.indexOf(this);
+
+        if (srcIdx < dstIdx) {
+            this.parentNode.insertBefore(dragSrcEl, this.nextSibling);
+        } else {
+            this.parentNode.insertBefore(dragSrcEl, this);
+        }
+    }
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+    grid.querySelectorAll('.room-card').forEach(c => c.classList.remove('drag-over'));
+}
+
+async function saveOrder() {
+    const cards = grid.querySelectorAll('.room-card');
+    const order = [...cards].map(c => parseInt(c.dataset.roomId));
+
+    btnSave.disabled = true;
+    btnSave.innerHTML = '<i class="bi bi-hourglass-split"></i> در حال ذخیره...';
+
+    try {
+        const res = await fetch('{% url "room_reorder" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+            },
+            body: JSON.stringify({ order: order }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+            showToast('ترتیب اتاق‌ها ذخیره شد.', 'success');
+            setTimeout(() => location.reload(), 800);
+        } else {
+            showToast(data.error || 'خطا در ذخیره', 'error');
+            btnSave.disabled = false;
+            btnSave.innerHTML = '<i class="bi bi-check-circle"></i> ذخیرهٔ ترتیب';
+        }
+    } catch (err) {
+        showToast('خطای شبکه', 'error');
+        btnSave.disabled = false;
+        btnSave.innerHTML = '<i class="bi bi-check-circle"></i> ذخیرهٔ ترتیب';
+    }
+}
+
+// ==================================================
+// ابزار CSRF
+// ==================================================
+function getCsrfToken() {
+    const el = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (el) return el.value;
+    // از cookie
+    const match = document.cookie.match(/csrftoken=([^;]+)/);
+    return match ? match[1] : '';
+}
+</script>
+{% endblock %}

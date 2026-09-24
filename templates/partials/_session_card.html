@@ -1,0 +1,106 @@
+{% load jalali_tags %}
+
+<div class="session-header">
+    <div>
+        <div class="consultant-line">
+            <i class="bi bi-person-circle" style="color:{{ s.level_snapshot.color|default:'#2563eb' }};"></i>
+            {{ s.consultant.get_full_name }}
+            {% if s.level_snapshot.name %}
+            <span class="level-badge" style="background:{{ s.level_snapshot.color|default:'#2563eb' }};">
+                {{ s.level_snapshot.name }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="client-line">
+            <i class="bi bi-person"></i>
+            {{ s.client.full_name }}
+            — {{ s.get_session_type_display }}
+        </div>
+    </div>
+    {% if s.room %}
+    <span class="room-badge"><i class="bi bi-door-open"></i> {{ s.room.name }}</span>
+    {% endif %}
+</div>
+
+{% if s.status == "in_progress" or s.status == "paused" %}
+<div class="timer-row">
+    <div class="timer-item">
+        <span class="label">شروع</span>
+        <span class="value">{{ s.started_at|jalali_time }}</span>
+    </div>
+    <div class="timer-item">
+        <span class="label">سپری‌شده</span>
+        <span class="value t-elapsed">--:--</span>
+    </div>
+    <div class="timer-item remaining">
+        <span class="label">باقی</span>
+        <span class="value t-remaining">--:--</span>
+    </div>
+</div>
+
+<div class="progress-track">
+    <div class="progress-bar-live" style="width:0%"></div>
+</div>
+{% endif %}
+
+{% if s.status == "awaiting_payment" %}
+<div class="timer-row">
+    <div class="timer-item">
+        <span class="label">پایان</span>
+        <span class="value">{{ s.ended_at|jalali_time }}</span>
+    </div>
+    <div class="timer-item">
+        <span class="label">مدت</span>
+        <span class="value">{{ s.actual_duration_minutes }} دقیقه</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="fee-row">
+    <span class="fee-label">
+        {% if s.status == "awaiting_payment" %}مبلغ نهایی{% else %}هزینهٔ لحظه‌ای{% endif %}:
+    </span>
+    <span class="fee-value">
+        <span class="t-fee">
+            {% if s.final_fee %}{{ s.final_fee|floatformat:0 }}{% else %}0{% endif %}
+        </span>
+        تومان
+    </span>
+</div>
+
+<div class="action-row">
+    {% if s.status == "in_progress" %}
+        <button class="btn btn-stop" onclick="endSession({{ s.id }})">
+            <i class="bi bi-stop-fill"></i> پایان و پرداخت
+        </button>
+        <button class="btn btn-extend" onclick="extendSession({{ s.id }}, 10)">
+            <i class="bi bi-plus"></i> ۱۰ دقیقه
+        </button>
+        <button class="btn btn-extend" onclick="pauseSession({{ s.id }})">
+            <i class="bi bi-pause-fill"></i> وقفه
+        </button>
+    {% elif s.status == "paused" %}
+        <button class="btn btn-start" onclick="resumeSession({{ s.id }})">
+            <i class="bi bi-play-fill"></i> ادامه
+        </button>
+        <button class="btn btn-stop" onclick="endSession({{ s.id }})">
+            <i class="bi bi-stop-fill"></i> پایان
+        </button>
+    {% elif s.status == "awaiting_payment" %}
+        <button class="btn btn-primary" onclick="paySession({{ s.id }})">
+            <i class="bi bi-cash-coin"></i> ثبت پرداخت
+        </button>
+        <button class="btn btn-extend" onclick="deferPayment({{ s.id }})">
+            <i class="bi bi-clock-history"></i> نسیه
+        </button>
+    {% endif %}
+</div>
+
+<script>
+function endSession(id) { alert('به‌زودی: پایان جلسهٔ ' + id); }
+function extendSession(id, min) { alert('به‌زودی: تمدید ' + min + ' دقیقه‌ای جلسهٔ ' + id); }
+function pauseSession(id) { alert('به‌زودی: وقفهٔ جلسهٔ ' + id); }
+function resumeSession(id) { alert('به‌زودی: ادامهٔ جلسهٔ ' + id); }
+function paySession(id) { alert('به‌زودی: پرداخت جلسهٔ ' + id); }
+function deferPayment(id) { alert('به‌زودی: نسیهٔ جلسهٔ ' + id); }
+</script>

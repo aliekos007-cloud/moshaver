@@ -377,6 +377,7 @@
             .global-search .search-shortcut { display: none; }
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -628,6 +629,308 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (e) { console.error('خطا در پیام‌ها:', e); }
     }
 });
+</script>
+<!-- ============ تقویم شمسی خودکار ============ -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    // اگه jQuery نیست، کاری نکن
+    if (typeof window.jQuery === 'undefined') return;
+    const $ = window.jQuery;
+
+    // فایل‌ها هنوز لود نشدن؟
+    if (typeof window.persianDate === 'undefined') return;
+
+    // ==================================================
+    // تبدیل ارقام انگلیسی <-> فارسی
+    // ==================================================
+    const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+    const EN_DIGITS = "0123456789";
+
+    function toFaDigits(str) {
+        return String(str).replace(/\d/g, d => FA_DIGITS[d]);
+    }
+
+    // ==================================================
+    // تبدیل یک input[type=date] به تقویم شمسی
+    // ==================================================
+    function convertDateInput(input) {
+        const $original = $(input);
+
+        // جلوگیری از پردازش دوباره
+        if ($original.data('jalali-done')) return;
+        $original.data('jalali-done', true);
+
+        // ذخیره ویژگی‌ها
+        const originalClass = $original.attr('class') || 'form-control';
+        const originalId = $original.attr('id') || '';
+        const originalName = $original.attr('name') || '';
+        const originalValue = $original.val() || '';
+        const isRequired = $original.prop('required');
+
+        // input اصلی → hidden
+        $original.attr('type', 'hidden');
+
+        // ساخت input نمایشی
+        const $display = $('<input>', {
+            type: 'text',
+            class: originalClass + ' jalali-date-display',
+            placeholder: 'مثلاً: ۱۴۰۵/۰۷/۰۳',
+            readonly: true,
+            autocomplete: 'off',
+            dir: 'ltr',
+            css: {
+                'text-align': 'right',
+                'cursor': 'pointer',
+                'background-color': '#fff',
+                'letter-spacing': '0.5px',
+            }
+        });
+
+        // id و name نمایشی برای دسترس‌پذیری
+        if (originalId) $display.attr('id', originalId + '_display');
+        if (isRequired) $display.attr('required', 'required');
+
+        // قرار دادن بعد از input اصلی
+        $original.after($display);
+
+        // ==================================================
+        // مقدار اولیه
+        // ==================================================
+        function setDisplayFromValue(value) {
+            if (!value) {
+                $display.val('');
+                return;
+            }
+            const parts = value.split('-');
+            if (parts.length !== 3) return;
+
+            const g = new Date(
+                parseInt(parts[0]),
+                parseInt(parts[1]) - 1,
+                parseInt(parts[2])
+            );
+            if (isNaN(g.getTime())) return;
+
+            const pd = new window.persianDate(g);
+            $display.val(toFaDigits(pd.format('YYYY/MM/DD')));
+        }
+
+        setDisplayFromValue(originalValue);
+
+        // ==================================================
+        // راه‌اندازی datepicker
+        // ==================================================
+        $display.persianDatepicker({
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            autoClose: true,
+            persianDigit: true,
+            observer: true,
+            position: 'auto',
+            calendar: {
+                persian: {
+                    locale: 'fa',
+                    leapYearMode: 'algorithmic',
+                }
+            },
+            toolbox: {
+                calendarSwitch: {
+                    enabled: false,  // حذف دکمهٔ تبدیل به میلادی
+                }
+            },
+            navigator: {
+                scroll: {
+                    enabled: false,
+                }
+            },
+            onSelect: function(unix) {
+                // unix به میلی‌ثانیه
+                const pd = new window.persianDate(unix);
+                const gy = pd.year();
+                const gm = pd.month();
+                const gd = pd.date();
+
+                const iso = `${gy}-${String(gm).padStart(2, '0')}-${String(gd).padStart(2, '0')}`;
+                $original.val(iso);
+
+                // به‌روزرسانی نمایش (با ارقام فارسی)
+                $display.val(toFaDigits(pd.format('YYYY/MM/DD')));
+
+                // رویداد change برای فرم‌هایی که گوش می‌دن
+                $original.trigger('change');
+            }
+        });
+
+        // اگه کاربر روی input نمایشی کلیک کرد، تقویم باز شه
+        $display.on('focus click', function() {
+            $display.data('datepicker') && $display.data('datepicker').show();
+        });
+    }
+
+    // ==================================================
+    // اجرا روی همه date inputs
+    // ==================================================
+    function initAll() {
+        document.querySelectorAll('input[type="date"]').forEach(convertDateInput);
+    }
+
+    // اولین بار
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+
+    // برای محتوای داینامیک (مثلاً AJAX)
+    const observer = new MutationObserver(function(mutations) {
+        let shouldInit = false;
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    if (node.matches && node.matches('input[type="date"]')) shouldInit = true;
+                    if (node.querySelectorAll && node.querySelectorAll('input[type="date"]').length) shouldInit = true;
+                }
+            });
+        });
+        if (shouldInit) initAll();
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+})();
+</script>
+<!-- ============ تقویم شمسی خودکار ============ -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    if (typeof window.jQuery === 'undefined') return;
+    const $ = window.jQuery;
+    if (typeof window.persianDate === 'undefined') return;
+
+    const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+
+    function toFaDigits(str) {
+        return String(str).replace(/\d/g, d => FA_DIGITS[d]);
+    }
+
+    function convertDateInput(input) {
+        const $original = $(input);
+        if ($original.data('jalali-done')) return;
+        $original.data('jalali-done', true);
+
+        const originalClass = $original.attr('class') || 'form-control';
+        const originalId = $original.attr('id') || '';
+        const originalValue = $original.val() || '';
+        const isRequired = $original.prop('required');
+
+        $original.attr('type', 'hidden');
+
+        const $display = $('<input>', {
+            type: 'text',
+            class: originalClass + ' jalali-date-display',
+            placeholder: 'مثلاً: ۱۴۰۵/۰۷/۰۳',
+            readonly: true,
+            autocomplete: 'off',
+            dir: 'ltr',
+            css: {
+                'text-align': 'right',
+                'cursor': 'pointer',
+                'background-color': '#fff',
+                'letter-spacing': '0.5px',
+            }
+        });
+
+        if (originalId) $display.attr('id', originalId + '_display');
+        if (isRequired) $display.attr('required', 'required');
+
+        $original.after($display);
+
+        function setDisplayFromValue(value) {
+            if (!value) { $display.val(''); return; }
+            const parts = value.split('-');
+            if (parts.length !== 3) return;
+            const g = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+            if (isNaN(g.getTime())) return;
+            const pd = new window.persianDate(g);
+            $display.val(toFaDigits(pd.format('YYYY/MM/DD')));
+        }
+
+        setDisplayFromValue(originalValue);
+
+        $display.persianDatepicker({
+            format: 'YYYY/MM/DD',
+            initialValue: false,
+            autoClose: true,
+            persianDigit: true,
+            observer: true,
+            position: 'auto',
+            calendar: {
+                persian: {
+                    locale: 'fa',
+                    leapYearMode: 'algorithmic',
+                }
+            },
+            toolbox: {
+                calendarSwitch: { enabled: false }
+            },
+            navigator: {
+                scroll: { enabled: false }
+            },
+            onSelect: function(unix) {
+                const pd = new window.persianDate(unix);
+                const gy = pd.year();
+                const gm = pd.month();
+                const gd = pd.date();
+                const iso = gy + '-' + String(gm).padStart(2, '0') + '-' + String(gd).padStart(2, '0');
+                $original.val(iso);
+                $display.val(toFaDigits(pd.format('YYYY/MM/DD')));
+                $original.trigger('change');
+            }
+        });
+
+        $display.on('focus click', function() {
+            const dp = $display.data('datepicker');
+            if (dp) dp.show();
+        });
+    }
+
+    function initAll() {
+        document.querySelectorAll('input[type="date"]').forEach(convertDateInput);
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAll);
+    } else {
+        initAll();
+    }
+
+    const observer = new MutationObserver(function(mutations) {
+        let shouldInit = false;
+        mutations.forEach(m => {
+            m.addedNodes.forEach(node => {
+                if (node.nodeType === 1) {
+                    if (node.matches && node.matches('input[type="date"]')) shouldInit = true;
+                    if (node.querySelectorAll && node.querySelectorAll('input[type="date"]').length) shouldInit = true;
+                }
+            });
+        });
+        if (shouldInit) initAll();
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        observer.observe(document.body, { childList: true, subtree: true });
+    });
+})();
 </script>
 {% block extra_js %}{% endblock %}
 </body>

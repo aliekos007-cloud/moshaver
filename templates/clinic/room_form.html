@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block header %}<i class="bi bi-door-open"></i> {{ title }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'room_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">نام اتاق <span class="required-star">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">ظرفیت</label>
+                            {{ form.capacity }}
+                            <div class="small text-muted mt-1">تعداد نفرات قابل استفاده همزمان</div>
+                            {% if form.capacity.errors %}<div class="text-danger small mt-1">{{ form.capacity.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">رنگ</label>
+                            {{ form.color }}
+                            {% if form.color.errors %}<div class="text-danger small mt-1">{{ form.color.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">تجهیزات</label>
+                            {{ form.equipment }}
+                            {% if form.equipment.errors %}<div class="text-danger small mt-1">{{ form.equipment.errors }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    فعال باشد
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> ذخیره
+                        </button>
+                        <a href="{% url 'room_list' %}" class="btn btn-outline-secondary">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

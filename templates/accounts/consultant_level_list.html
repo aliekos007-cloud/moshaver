@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}سطوح مشاور{% endblock %}
+
+{% block header %}<i class="bi bi-award"></i> سطوح مشاور{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ total }} سطح تعریف شده — تعرفه‌ها و زمان استاندارد هر سطح</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'consultant_level_create' %}" class="btn btn-primary">
+    <i class="bi bi-plus-circle"></i> سطح جدید
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .levels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.25rem;
+    }
+
+    .level-card {
+        background: #fff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        transition: all .25s ease;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .level-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0,0,0,0.1);
+    }
+
+    .level-card[data-active="false"] {
+        opacity: 0.6;
+        filter: grayscale(0.6);
+    }
+
+    .level-color-bar { height: 6px; background: var(--primary); }
+
+    .level-body {
+        padding: 1.25rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .level-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+
+    .level-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+    }
+
+    .level-color-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+
+    .level-consultant-badge {
+        background: rgba(37, 99, 235, 0.08);
+        color: #2563eb;
+        font-size: .72rem;
+        padding: .25rem .6rem;
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .level-consultant-badge.empty {
+        background: #f1f5f9;
+        color: #94a3b8;
+    }
+
+    .level-price-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        text-align: center;
+        border-right: 3px solid var(--primary);
+    }
+
+    .level-price-label {
+        font-size: .72rem;
+        color: #64748b;
+        margin-bottom: .25rem;
+    }
+
+    .level-price-value {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+
+    .level-price-unit {
+        font-size: .8rem;
+        color: #64748b;
+        font-weight: 400;
+        margin-right: .25rem;
+    }
+
+    .level-price-meta {
+        font-size: .72rem;
+        color: #94a3b8;
+        margin-top: .35rem;
+    }
+
+    .level-info-list {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        flex: 1;
+        margin-bottom: 1rem;
+    }
+
+    .level-info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: .82rem;
+        padding: .35rem 0;
+        border-bottom: 1px dashed #f1f5f9;
+    }
+
+    .level-info-item:last-child { border-bottom: none; }
+
+    .level-info-label {
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .level-info-label i {
+        color: #94a3b8;
+        font-size: .85rem;
+        width: 16px;
+    }
+
+    .level-info-value {
+        font-weight: 600;
+        color: #0f172a;
+    }
+
+    .level-actions {
+        display: flex;
+        gap: .4rem;
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .level-actions .btn {
+        font-size: .78rem;
+        padding: .4rem .7rem;
+        flex: 1;
+        justify-content: center;
+    }
+
+    .empty-levels {
+        background: #fff;
+        border-radius: 16px;
+        padding: 3rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+    }
+
+    .empty-levels i {
+        font-size: 3.5rem;
+        color: #cbd5e1;
+        display: block;
+        margin-bottom: 1rem;
+    }
+
+    .info-banner {
+        background: linear-gradient(135deg, rgba(37,99,235,0.06), rgba(6,182,212,0.06));
+        border-right: 4px solid var(--primary);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: .75rem;
+        align-items: flex-start;
+    }
+
+    .info-banner i {
+        color: var(--primary);
+        font-size: 1.25rem;
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    .info-banner .text {
+        font-size: .85rem;
+        color: #475569;
+        line-height: 1.7;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if levels_data %}
+<div class="info-banner">
+    <i class="bi bi-info-circle-fill"></i>
+    <div class="text">
+        <strong>تعرفه‌گذاری زمان‌محور:</strong>
+        هر سطح شامل زمان استاندارد (مثلاً ۴۵ دقیقه)، مبلغ پایه، و هزینهٔ هر دقیقهٔ مازاد است.
+        اگر جلسه از زمان استاندارد عبور کند، مبلغ به‌صورت خودکار محاسبه می‌شود.
+    </div>
+</div>
+
+<div class="levels-grid">
+    {% for item in levels_data %}
+        {% with level=item.level %}
+        <div class="level-card" data-active="{{ level.is_active|yesno:'true,false' }}">
+            <div class="level-color-bar" style="background: {{ level.color }};"></div>
+
+            <div class="level-body">
+                <div class="level-header">
+                    <h3 class="level-title">
+                        <span class="level-color-dot" style="background: {{ level.color }};"></span>
+                        {{ level.name }}
+                    </h3>
+                    {% if item.consultant_count > 0 %}
+                        <span class="level-consultant-badge">
+                            <i class="bi bi-people-fill"></i> {{ item.consultant_count|pnum }} مشاور
+                        </span>
+                    {% else %}
+                        <span class="level-consultant-badge empty">
+                            بدون مشاور
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="level-price-box">
+                    <div class="level-price-label">مبلغ جلسهٔ {{ level.standard_minutes|pnum }} دقیقه‌ای</div>
+                    <div class="level-price-value">
+                        {{ level.base_price|pnum }}
+                        <span class="level-price-unit">تومان</span>
+                    </div>
+                    {% if level.overtime_per_minute > 0 %}
+                    <div class="level-price-meta">
+                        هر دقیقهٔ مازاد: {{ level.overtime_per_minute|pnum }} تومان
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="level-info-list">
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-clock-history"></i> زمان استاندارد
+                        </span>
+                        <span class="level-info-value">{{ level.standard_minutes|pnum }} دقیقه</span>
+                    </div>
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-gift"></i> ارفاق
+                        </span>
+                        <span class="level-info-value">{{ level.grace_minutes|pnum }} دقیقه</span>
+                    </div>
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-arrow-up-square"></i> رُند کردن
+                        </span>
+                        <span class="level-info-value">
+                            {% if level.rounding_minutes > 0 %}
+                                {{ level.rounding_minutes|pnum }} دقیقه
+                            {% else %}
+                                دقیقه‌ای
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-hourglass-split"></i> حداکثر زمان
+                        </span>
+                        <span class="level-info-value">{{ level.max_minutes|pnum }} دقیقه</span>
+                    </div>
+                    {% if level.insurance_share > 0 %}
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-shield-check"></i> سهم بیمه
+                        </span>
+                        <span class="level-info-value">{{ level.insurance_share|pnum }} تومان</span>
+                    </div>
+                    {% endif %}
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-calendar-check"></i> اعتبار
+                        </span>
+                        <span class="level-info-value">
+                            از {{ level.effective_from|jalali }}
+                            {% if level.effective_to %}
+                                تا {{ level.effective_to|jalali }}
+                            {% else %}
+                                <span class="text-success small">(جاری)</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="level-info-item">
+                        <span class="level-info-label">
+                            <i class="bi bi-circle-fill" style="font-size:.6rem;color:{% if level.is_active %}#10b981{% else %}#94a3b8{% endif %};"></i> وضعیت
+                        </span>
+                        <span class="level-info-value">
+                            {% if level.is_active %}
+                                <span class="text-success">فعال</span>
+                            {% else %}
+                                <span class="text-muted">غیرفعال</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="level-actions">
+                    <a href="{% url 'consultant_level_edit' level.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil"></i> ویرایش
+                    </a>
+                    <form method="post" action="{% url 'consultant_level_toggle' level.pk %}" class="d-inline-flex" style="flex:1;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary w-100" title="فعال/غیرفعال">
+                            {% if level.is_active %}
+                                <i class="bi bi-toggle-on"></i> غیرفعال
+                            {% else %}
+                                <i class="bi bi-toggle-off"></i> فعال
+                            {% endif %}
+                        </button>
+                    </form>
+                    <a href="{% url 'consultant_level_delete' level.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-levels">
+    <i class="bi bi-award"></i>
+    <h3 class="h5 mb-2">هنوز هیچ سطح مشاوری تعریف نشده است</h3>
+    <p class="mb-3">برای شروع، سطوح مشاوران را با تعرفه‌هایشان تعریف کنید.</p>
+
+    <div class="d-flex gap-2 justify-content-center mb-4 flex-wrap">
+        <span class="badge bg-primary">کارشناس — ۳۰۰٬۰۰۰</span>
+        <span class="badge bg-primary">ارشد — ۵۰۰٬۰۰۰</span>
+        <span class="badge bg-primary">دکتری — ۸۰۰٬۰۰۰</span>
+    </div>
+
+    <a href="{% url 'consultant_level_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> ساخت اولین سطح
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}

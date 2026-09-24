@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}حذف اتاق{% endblock %}
+
+{% block header %}<i class="bi bi-trash"></i> حذف اتاق{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    آیا از حذف اتاق «<strong>{{ room.name }}</strong>» مطمئن هستید؟
+                </div>
+
+                <p class="text-muted small">
+                    این عمل قابل بازگشت نیست. اگر این اتاق در جلسات یا حضورها استفاده شده باشد،
+                    سیستم اجازهٔ حذف نمی‌دهد و باید آن را غیرفعال کنید.
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> بله، حذف کن
+                        </button>
+                        <a href="{% url 'room_list' %}" class="btn btn-outline-secondary">انصراف</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
