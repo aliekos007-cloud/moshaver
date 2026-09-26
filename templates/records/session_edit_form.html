@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}ویرایش جلسه{% endblock %}
+
+{% block header %}<i class="bi bi-pencil-square"></i> ویرایش جلسه{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ session.client.full_name }}</div>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'session_detail' session.pk %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-section {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1rem 1.15rem;
+        margin-bottom: 1rem;
+        border-right: 3px solid var(--primary);
+    }
+    .form-section-title {
+        font-size: .9rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: .75rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .form-section-title i { color: var(--primary); }
+    .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
+
+    .warning-box {
+        background: #fef3c7;
+        border-right: 4px solid #f59e0b;
+        border-radius: 10px;
+        padding: .65rem .9rem;
+        margin-bottom: 1rem;
+        display: flex;
+        gap: .6rem;
+        align-items: flex-start;
+        font-size: .82rem;
+        color: #92400e;
+    }
+    .warning-box i {
+        color: #f59e0b;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .time-input-24 {
+        font-family: 'Courier New', monospace;
+        letter-spacing: 2px;
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-9">
+        <div class="warning-box">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+            <div>
+                <strong>توجه:</strong>
+                اگر زمان جلسه را تغییر دهید، ممکن است با جلسات دیگر تداخل داشته باشد.
+                در صورت تداخل، سیستم اجازهٔ ذخیره نمی‌دهد.
+            </div>
+        </div>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for err in form.non_field_errors %}<div>{{ err }}</div>{% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- ===== مشاور و اتاق ===== -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-people"></i> مشاور و اتاق
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label class="form-label">مشاور <span class="required-star">*</span></label>
+                        {{ form.consultant }}
+                        {% if form.consultant.errors %}
+                            <div class="text-danger small mt-1">{{ form.consultant.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">اتاق <span class="required-star">*</span></label>
+                        {{ form.room }}
+                        {% if form.room.errors %}
+                            <div class="text-danger small mt-1">{{ form.room.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== زمان جلسه ===== -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-calendar-check"></i> زمان جلسه
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">تاریخ <span class="required-star">*</span></label>
+                        {{ form.scheduled_date }}
+                        {% if form.scheduled_date.errors %}
+                            <div class="text-danger small mt-1">{{ form.scheduled_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">ساعت شروع <span class="required-star">*</span></label>
+                        {{ form.scheduled_start_time }}
+                        {% if form.scheduled_start_time.errors %}
+                            <div class="text-danger small mt-1">{{ form.scheduled_start_time.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">مدت (دقیقه) <span class="required-star">*</span></label>
+                        {{ form.duration_minutes }}
+                        {% if form.duration_minutes.errors %}
+                            <div class="text-danger small mt-1">{{ form.duration_minutes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== اطلاعات تکمیلی ===== -->
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="bi bi-info-circle"></i> اطلاعات تکمیلی
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">نوع جلسه</label>
+                        {{ form.session_type }}
+                        {% if form.session_type.errors %}
+                            <div class="text-danger small mt-1">{{ form.session_type.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">یادداشت</label>
+                        {{ form.secretary_note }}
+                        {% if form.secretary_note.errors %}
+                            <div class="text-danger small mt-1">{{ form.secretary_note.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> ذخیرهٔ تغییرات
+                </button>
+                <a href="{% url 'session_detail' session.pk %}" class="btn btn-outline-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ==================================================
+    // محدودیت تاریخ گذشته
+    // ==================================================
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    var todayISO = yyyy + '-' + mm + '-' + dd;
+
+    var dateInput = document.getElementById('id_scheduled_date');
+    if (dateInput) {
+        dateInput.setAttribute('min', todayISO);
+    }
+
+    // ==================================================
+    // input زمان ۲۴ ساعته
+    // ==================================================
+    document.querySelectorAll('.time-24').forEach(function(input) {
+        input.addEventListener('input', function() {
+            var v = this.value
+                .replace(/[۰-۹]/g, function(d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+                .replace(/[^\d:]/g, '');
+
+            var parts = v.split(':');
+            if (parts.length > 2) {
+                v = parts[0] + ':' + parts.slice(1).join('');
+            }
+
+            if (parts[0] && parts[0].length === 2 && !v.includes(':') && v.length === 2) {
+                v = v + ':';
+            }
+
+            if (v.length > 5) v = v.substring(0, 5);
+
+            this.value = v;
+        });
+
+        input.addEventListener('blur', function() {
+            var v = this.value.trim();
+            if (!v) return;
+
+            if (/^\d{3,4}$/.test(v)) {
+                if (v.length === 3) v = '0' + v[0] + ':' + v.substring(1);
+                else v = v.substring(0, 2) + ':' + v.substring(2);
+            }
+
+            var m = v.match(/^(\d{1,2}):?(\d{1,2})?$/);
+            if (m) {
+                var h = parseInt(m[1] || 0);
+                var min = parseInt(m[2] || 0);
+                if (h > 23) h = 23;
+                if (min > 59) min = 59;
+                this.value = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

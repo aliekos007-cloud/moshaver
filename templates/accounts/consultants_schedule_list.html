@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block title %}برنامه مشاوران{% endblock %}
+
+{% block header %}<i class="bi bi-calendar-week"></i> برنامه مشاوران{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ total }} مشاور — برنامه هفتگی و تنظیمات اسلات</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .consultant-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: .85rem;
+    }
+
+    .consultant-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-top: 4px solid #2563eb;
+        transition: all .2s ease;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .consultant-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    .consultant-card[data-active="false"] {
+        opacity: .55;
+        border-top-color: #cbd5e1;
+        filter: grayscale(0.5);
+    }
+
+    .consultant-card[data-has-schedule="false"] {
+        border-top-color: #f59e0b;
+    }
+
+    .consultant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: .75rem;
+    }
+
+    .consultant-info {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        min-width: 0;
+    }
+
+    .consultant-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #06b6d4, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: .95rem;
+        flex-shrink: 0;
+    }
+
+    .consultant-name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: .92rem;
+        line-height: 1.2;
+    }
+
+    .consultant-sub {
+        font-size: .7rem;
+        color: #64748b;
+        margin-top: .1rem;
+    }
+
+    .status-badge {
+        font-size: .65rem;
+        padding: .2rem .55rem;
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-badge.active { background: rgba(16,185,129,.12); color: #059669; }
+    .status-badge.warning { background: rgba(245,158,11,.12); color: #d97706; }
+    .status-badge.inactive { background: rgba(100,116,139,.12); color: #64748b; }
+
+    .days-list {
+        display: flex;
+        flex-direction: column;
+        gap: .25rem;
+        margin: .5rem 0;
+        flex: 1;
+    }
+
+    .day-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: .3rem .55rem;
+        background: #f8fafc;
+        border-radius: 7px;
+        font-size: .78rem;
+        border-right: 3px solid #10b981;
+    }
+
+    .day-item .day-name {
+        font-weight: 600;
+        color: #0f172a;
+    }
+    .day-item .day-time {
+        font-family: 'Courier New', monospace;
+        color: #475569;
+        font-size: .75rem;
+    }
+
+    .no-days {
+        padding: .75rem;
+        text-align: center;
+        background: #fef3c7;
+        border-radius: 9px;
+        font-size: .78rem;
+        color: #92400e;
+        margin: .5rem 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .35rem;
+    }
+
+    .slot-info {
+        background: #eff6ff;
+        border-radius: 8px;
+        padding: .35rem .6rem;
+        font-size: .72rem;
+        color: #1e40af;
+        margin-bottom: .65rem;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: .35rem;
+        padding-top: .65rem;
+        border-top: 1px solid #f1f5f9;
+        margin-top: auto;
+    }
+
+    .card-actions .btn {
+        flex: 1;
+        justify-content: center;
+        font-size: .78rem;
+        padding: .4rem .6rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if consultants_data %}
+<div class="consultant-grid">
+    {% for item in consultants_data %}
+        {% with c=item.consultant %}
+        <div class="consultant-card"
+             data-active="{{ c.is_active|yesno:'true,false' }}"
+             data-has-schedule="{{ item.has_schedule|yesno:'true,false' }}">
+
+            <div class="consultant-header">
+                <div class="consultant-info">
+                    <div class="consultant-avatar">{{ c.first_name|first }}</div>
+                    <div style="min-width: 0;">
+                        <div class="consultant-name">{{ c.get_full_name }}</div>
+                        <div class="consultant-sub">
+                            {% if c.consultant_level %}
+                                {{ c.consultant_level.name }}
+                            {% else %}
+                                بدون سطح
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if not c.is_active %}
+                    <span class="status-badge inactive">غیرفعال</span>
+                {% elif item.has_schedule %}
+                    <span class="status-badge active">{{ item.active_days_count }} روز</span>
+                {% else %}
+                    <span class="status-badge warning">بدون برنامه</span>
+                {% endif %}
+            </div>
+
+            {% if item.has_schedule %}
+                <div class="days-list">
+                    {% for d in item.active_days %}
+                    <div class="day-item">
+                        <span class="day-name">{{ d.name }}</span>
+                        <span class="day-time">{{ d.start }} — {{ d.end }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-days">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    هنوز برنامه‌ای ثبت نشده
+                </div>
+            {% endif %}
+
+            <div class="slot-info">
+                <i class="bi bi-clock-history"></i>
+                هر نوبت {{ item.slot_minutes }} دقیقه
+            </div>
+
+            <div class="card-actions">
+                <a href="{% url 'consultant_month_schedule' c.pk %}" class="btn btn-primary">
+                    <i class="bi bi-calendar3"></i> تقویم ماهانه
+                </a>
+                <a href="{% url 'consultant_weekly_schedule' c.pk %}" class="btn btn-outline-primary">
+                    <i class="bi bi-calendar-week"></i> الگو
+                </a>
+            </div>
+            
+        </div>
+        {% endwith %}
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+    <div class="empty-state">
+        <i class="bi bi-person-x"></i>
+        <div class="mb-3">هنوز هیچ مشاوری با سطح تعریف نشده است.</div>
+        <a href="{% url 'user_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> افزودن مشاور
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

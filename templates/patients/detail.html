@@ -46,7 +46,7 @@
             </div>
         </div>
 
-        <!-- ===== تماس ===== -->
+        <!-- ===== تماس و آدرس ===== -->
         <div class="card">
             <div class="card-body">
                 <h6 class="text-primary mb-3"><i class="bi bi-telephone"></i> تماس و آدرس</h6>
@@ -67,8 +67,10 @@
                     <tr>
                         <th class="text-muted">آدرس</th>
                         <td>
-                            {{ patient.province }} {{ patient.city }}<br>
+                            {{ patient.province }} — {{ patient.city }}
+                            {% if patient.district %} — {{ patient.district }}{% endif %}<br>
                             {{ patient.street }} {{ patient.alley }} {{ patient.plaque }}
+                            {% if patient.postal_code %}<br>کد پستی: {{ patient.postal_code }}{% endif %}
                         </td>
                     </tr>
                     {% endif %}
@@ -155,7 +157,6 @@
 
 {% block extra_css %}
 <style>
-    /* ===== نام مراجع بزرگ و واضح ===== */
     .patient-name-inline {
         font-size: 1.15rem;
         font-weight: 700;
@@ -172,7 +173,6 @@
         margin-right: .5rem;
     }
 
-    /* ===== کارت‌های مینی ===== */
     .stat-mini {
         background: #f8fafc;
         border-radius: 10px;
@@ -185,7 +185,6 @@
     .stat-mini-value { font-weight: 700; color: #0f172a; font-size: .95rem; }
     .stat-mini-value small { font-weight: 400; font-size: .7rem; color: #94a3b8; }
 
-    /* ===== لیست جلسات ===== */
     .sessions-scroll {
         max-height: 500px;
         overflow-y: auto;

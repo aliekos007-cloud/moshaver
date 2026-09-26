@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}داشبورد مشاور{% endblock %}
+
+{% block header %}<i class="bi bi-speedometer2"></i> داشبورد من{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    {{ today|default:""|jalali_full }} — {{ user.get_full_name }}
+    {% if user.consultant_level %}
+        — {{ user.consultant_level.name }}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'consultant_weekly_schedule' user.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-calendar-week"></i> برنامهٔ هفتگی من
+    </a>
+    <a href="{% url 'session_list' %}" class="btn btn-primary">
+        <i class="bi bi-calendar2-check"></i> جلسات من
+    </a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dash-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: .75rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-mini-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: .85rem 1rem;
+        box-shadow: var(--shadow-sm);
+        border-right: 4px solid #2563eb;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+    }
+    .stat-mini-card.green { border-right-color: #10b981; }
+    .stat-mini-card.orange { border-right-color: #f59e0b; }
+    .stat-mini-card.purple { border-right-color: #8b5cf6; }
+
+    .stat-mini-icon {
+        width: 38px; height: 38px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+    .stat-mini-card.green .stat-mini-icon { background: rgba(16,185,129,.12); color: #10b981; }
+    .stat-mini-card.orange .stat-mini-icon { background: rgba(245,158,11,.12); color: #f59e0b; }
+    .stat-mini-card.purple .stat-mini-icon { background: rgba(139,92,246,.12); color: #8b5cf6; }
+    .stat-mini-card .stat-mini-icon { background: rgba(37,99,235,.12); color: #2563eb; }
+
+    .stat-mini-value {
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1.1;
+    }
+    .stat-mini-label {
+        font-size: .72rem;
+        color: #64748b;
+    }
+
+    /* ===== جلسهٔ فعال ===== */
+    .active-session {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .active-session::before {
+        content: "";
+        position: absolute;
+        top: -50%; right: -10%;
+        width: 180px; height: 180px;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .active-session-content {
+        position: relative;
+        z-index: 1;
+    }
+    .active-session-label {
+        font-size: .72rem;
+        opacity: .85;
+        margin-bottom: .2rem;
+    }
+    .active-session-name {
+        font-size: 1.15rem;
+        font-weight: 700;
+    }
+    .active-session-sub {
+        font-size: .8rem;
+        opacity: .9;
+        margin-top: .15rem;
+    }
+    .active-session-timer {
+        font-size: 1.6rem;
+        font-weight: 800;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+        position: relative;
+        z-index: 1;
+    }
+    .active-session-blink {
+        display: inline-block;
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #fff;
+        margin-left: .35rem;
+        animation: blink 1.2s infinite;
+        vertical-align: middle;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ===== جدول جلسات ===== */
+    .sessions-list {
+        background: #fff;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+    }
+    .session-item {
+        display: grid;
+        grid-template-columns: 90px 1fr auto;
+        gap: .75rem;
+        align-items: center;
+        padding: .65rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        text-decoration: none;
+        color: inherit;
+        transition: background .15s;
+        border-right: 4px solid #cbd5e1;
+    }
+    .session-item:last-child { border-bottom: none; }
+    .session-item:hover {
+        background: #f8fafc;
+        color: inherit;
+    }
+    .session-item[data-status="scheduled"] { border-right-color: #94a3b8; }
+    .session-item[data-status="in_progress"] { border-right-color: #f59e0b; }
+    .session-item[data-status="awaiting_payment"] { border-right-color: #0ea5e9; }
+    .session-item[data-status="completed"] { border-right-color: #10b981; }
+    .session-item[data-status="cancelled"] { border-right-color: #ef4444; opacity: .6; }
+
+    .session-time {
+        text-align: center;
+    }
+    .session-time .hour {
+        font-size: 1rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        color: #0f172a;
+    }
+    .session-time .dur {
+        font-size: .68rem;
+        color: #94a3b8;
+    }
+
+    .session-client {
+        min-width: 0;
+    }
+    .session-client .name {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: .88rem;
+    }
+    .session-client .meta {
+        font-size: .72rem;
+        color: #64748b;
+        display: flex;
+        gap: .5rem;
+        flex-wrap: wrap;
+        margin-top: .1rem;
+    }
+
+    .session-status {
+        font-size: .68rem;
+        padding: .2rem .55rem;
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .status-scheduled { background: rgba(100,116,139,.12); color: #475569; }
+    .status-in_progress { background: rgba(245,158,11,.15); color: #d97706; }
+    .status-paused { background: rgba(139,92,246,.12); color: #7c3aed; }
+    .status-awaiting_payment { background: rgba(14,165,233,.12); color: #0284c7; }
+    .status-completed { background: rgba(16,185,129,.12); color: #059669; }
+    .status-cancelled { background: rgba(239,68,68,.12); color: #dc2626; }
+
+    .empty-mini {
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+    }
+    .empty-mini i {
+        font-size: 2rem;
+        color: #cbd5e1;
+        display: block;
+        margin-bottom: .5rem;
+    }
+
+    .section-title-mini {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1rem 0 .5rem;
+    }
+    .section-title-mini h6 {
+        margin: 0;
+        font-size: .88rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .section-title-mini .count-pill {
+        background: #2563eb;
+        color: #fff;
+        padding: .1rem .5rem;
+        border-radius: 999px;
+        font-size: .68rem;
+        font-weight: 600;
+    }
+
+    @media (max-width: 767px) {
+        .session-item { grid-template-columns: 70px 1fr; }
+        .session-status { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== آمار سریع ===== -->
+<div class="dash-grid">
+    <div class="stat-mini-card green">
+        <div class="stat-mini-icon"><i class="bi bi-calendar-check"></i></div>
+        <div>
+            <div class="stat-mini-value">{{ my_sessions_today|length|pnum }}</div>
+            <div class="stat-mini-label">جلسات امروز</div>
+        </div>
+    </div>
+
+    <div class="stat-mini-card orange">
+        <div class="stat-mini-icon"><i class="bi bi-clock-history"></i></div>
+        <div>
+            <div class="stat-mini-value">{{ my_recent|length|pnum }}</div>
+            <div class="stat-mini-label">جلسات اخیر</div>
+        </div>
+    </div>
+
+    <div class="stat-mini-card purple">
+        <div class="stat-mini-icon"><i class="bi bi-cash-coin"></i></div>
+        <div>
+            <div class="stat-mini-value">{{ user.consultant_level.base_price|default:0|pnum }}</div>
+            <div class="stat-mini-label">تعرفهٔ هر جلسه (تومان)</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== جلسهٔ فعال ===== -->
+{% if my_active %}
+<div class="active-session">
+    <div class="active-session-content">
+        <div class="active-session-label">
+            <span class="active-session-blink"></span>
+            در حال مشاوره
+        </div>
+        <div class="active-session-name">{{ my_active.client.full_name }}</div>
+        <div class="active-session-sub">
+            {% if my_active.room %}
+                <i class="bi bi-door-open-fill"></i> {{ my_active.room.name }}
+            {% endif %}
+            — {{ my_active.get_session_type_display }}
+        </div>
+    </div>
+    <div class="active-session-timer" id="active-timer">--:--</div>
+</div>
+{% endif %}
+
+<!-- ===== جلسات امروز ===== -->
+<div class="section-title-mini">
+    <h6><i class="bi bi-calendar-day text-primary"></i> جلسات امروز</h6>
+    {% if my_sessions_today %}
+        <span class="count-pill">{{ my_sessions_today|length|pnum }}</span>
+    {% endif %}
+</div>
+
+{% if my_sessions_today %}
+<div class="sessions-list">
+    {% for s in my_sessions_today %}
+    <a href="{% url 'session_detail' s.pk %}" class="session-item" data-status="{{ s.status }}">
+        <div class="session-time">
+            <div class="hour">{{ s.scheduled_start|jalali_time }}</div>
+            <div class="dur">
+                {% if s.actual_duration_minutes %}
+                    {{ s.actual_duration_minutes|pnum }} دقیقه
+                {% else %}
+                    {{ s.scheduled_end|jalali_time }}
+                {% endif %}
+            </div>
+        </div>
+        <div class="session-client">
+            <div class="name">{{ s.client.full_name }}</div>
+            <div class="meta">
+                <span><i class="bi bi-tag"></i> {{ s.get_session_type_display }}</span>
+                {% if s.room %}
+                    <span><i class="bi bi-door-open"></i> {{ s.room.name }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <span class="session-status status-{{ s.status }}">
+            {{ s.get_status_display }}
+        </span>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="sessions-list">
+    <div class="empty-mini">
+        <i class="bi bi-calendar-x"></i>
+        جلسه‌ای برای امروز ثبت نشده است.
+    </div>
+</div>
+{% endif %}
+
+<!-- ===== جلسات اخیر ===== -->
+{% if my_recent %}
+<div class="section-title-mini">
+    <h6><i class="bi bi-clock-history text-primary"></i> جلسات اخیر</h6>
+</div>
+
+<div class="sessions-list">
+    {% for s in my_recent %}
+    <a href="{% url 'session_detail' s.pk %}" class="session-item" data-status="{{ s.status }}">
+        <div class="session-time">
+            <div class="hour">{{ s.scheduled_start|jalali_time }}</div>
+            <div class="dur">{{ s.scheduled_start|jalali_short }}</div>
+        </div>
+        <div class="session-client">
+            <div class="name">{{ s.client.full_name }}</div>
+            <div class="meta">
+                <span><i class="bi bi-clock"></i> {{ s.actual_duration_minutes|pnum }} دقیقه</span>
+                {% if s.final_fee %}
+                    <span><i class="bi bi-cash"></i> {{ s.final_fee|pnum }} تومان</span>
+                {% endif %}
+            </div>
+        </div>
+        <span class="session-status status-{{ s.status }}">
+            {{ s.get_status_display }}
+        </span>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    // ==================================================
+    // تایمر جلسهٔ فعال (اگه وجود داره)
+    // ==================================================
+    var timerEl = document.getElementById('active-timer');
+    if (!timerEl) return;
+
+    {% if my_active and my_active.started_at %}
+    var startedAt = new Date("{{ my_active.started_at|date:'c' }}").getTime();
+    var standardMinutes = {{ my_active.level_snapshot.standard_minutes|default:45 }};
+    var standardSec = standardMinutes * 60;
+
+    var FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+    function toFa(str) {
+        return String(str).replace(/\d/g, function(d) { return FA_DIGITS[d]; });
+    }
+    function fmtDuration(seconds) {
+        if (seconds < 0) seconds = 0;
+        var m = Math.floor(seconds / 60);
+        var s = seconds % 60;
+        return toFa(String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0'));
+    }
+
+    function tick() {
+        var elapsed = Math.floor((Date.now() - startedAt) / 1000);
+        timerEl.textContent = fmtDuration(elapsed);
+
+        // اگه از استاندارد گذشت، قرمز بشه
+        if (elapsed > standardSec) {
+            timerEl.style.color = '#fef3c7';
+        }
+    }
+    setInterval(tick, 1000);
+    tick();
+    {% endif %}
+})();
+</script>
+{% endblock %}

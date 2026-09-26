@@ -129,9 +129,17 @@ def session_create(request):
         return redirect("dashboard")
 
     from .forms import SessionCreateForm
+    from patients.models import Patient
+    from accounts.models import User
+
+    # ===== پارامترهای URL =====
+    client_id = request.GET.get("client")
+    consultant_id = request.GET.get("consultant")
+    date_str = request.GET.get("date")     # YYYY-MM-DD
+    time_str = request.GET.get("time")     # HH:MM
 
     if request.method == "POST":
-        form = SessionCreateForm(request.POST)
+        form = SessionCreateForm(request.POST, current_user=request.user)
         if form.is_valid():
             session = form.save()
             session.created_by = request.user
@@ -147,12 +155,39 @@ def session_create(request):
             )
             return redirect("session_detail", pk=session.pk)
     else:
-        form = SessionCreateForm()
+        initial = {}
+
+        # مراجع
+        if client_id:
+            try:
+                initial["client"] = Patient.objects.get(pk=client_id)
+            except Patient.DoesNotExist:
+                pass
+
+        # مشاور
+        if consultant_id:
+            try:
+                initial["consultant"] = User.objects.get(pk=consultant_id)
+            except User.DoesNotExist:
+                pass
+
+        # تاریخ (میلادی از URL)
+        if date_str:
+            from datetime import datetime as dt
+            try:
+                initial["scheduled_date"] = dt.strptime(date_str, "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
+
+        # ساعت
+        if time_str:
+            initial["scheduled_time"] = time_str
+
+        form = SessionCreateForm(initial=initial, current_user=request.user)
 
     return render(request, "records/session_form.html", {
         "form": form,
     })
-
 
 # ==================================================
 # جزئیات جلسه
@@ -194,6 +229,22 @@ def session_start(request, pk):
         return JsonResponse({
             "ok": False,
             "error": "جلسه در وضعیت قابل شروع نیست."
+        }, status=400)
+
+    # ===== چک: مشاور در جلسهٔ فعال دیگری نباشد =====
+    active_conflict = Session.objects.filter(
+        consultant=session.consultant,
+        status__in=["in_progress", "paused"],
+    ).exclude(pk=session.pk).first()
+
+    if active_conflict:
+        return JsonResponse({
+            "ok": False,
+            "error": (
+                f"«{session.consultant.get_full_name()}» در حال حاضر "
+                f"در جلسهٔ دیگری با {active_conflict.client.full_name} است. "
+                "ابتدا آن جلسه را ببندید."
+            ),
         }, status=400)
 
     session.start(by_user=request.user)
@@ -499,3 +550,94 @@ def _add_client_debt(client, amount):
         return
     client.outstanding_balance = (client.outstanding_balance or 0) + amount
     client.save(update_fields=["outstanding_balance"])
+
+# ==================================================
+# ویرایش جلسه
+# ==================================================
+
+def session_edit(request, pk):
+    """ویرایش جلسه — فقط در وضعیت scheduled یا paused."""
+    if not request.user.is_authenticated:
+        return redirect("login")
+
+    role = getattr(request.user, "role", None)
+    if role not in ("manager", "secretary", "consultant"):
+        messages.error(request, "دسترسی مجاز نیست.")
+        return redirect("dashboard")
+
+    session = get_object_or_404(
+        Session.objects.select_related("client", "consultant", "room"),
+        pk=pk,
+    )
+
+    # مشاور فقط جلسات خودش
+    if role == "consultant" and session.consultant_id != request.user.id:
+        messages.error(request, "دسترسی به این جلسه مجاز نیست.")
+        return redirect("session_list")
+
+    # چک وضعیت
+    if session.status not in ("scheduled", "paused"):
+        messages.error(
+            request,
+            f"این جلسه در وضعیت «{session.get_status_display()}» است و قابل ویرایش نیست. "
+            "فقط جلسات زمان‌بندی‌شده یا در وقفه قابل ویرایش هستند."
+        )
+        return redirect("session_detail", pk=session.pk)
+
+    from .forms import SessionEditForm
+
+    if request.method == "POST":
+        form = SessionEditForm(request.POST, instance=session)
+        if form.is_valid():
+            form.save()
+
+            log_action(
+                request, "update_session", session,
+                description=f"ویرایش جلسهٔ {session.client.full_name}",
+            )
+            messages.success(request, "جلسه با موفقیت ویرایش شد.")
+            return redirect("session_detail", pk=session.pk)
+    else:
+        # مقدار اولیه از خود جلسه
+        form = SessionEditForm(instance=session)
+
+    return render(request, "records/session_edit_form.html", {
+        "form": form,
+        "session": session,
+    })
+
+
+# ==================================================
+# حذف جلسه (لغو)
+# ==================================================
+
+@require_POST
+def session_delete(request, pk):
+    """لغو جلسه — فقط جلسات زمان‌بندی‌شده."""
+    if not request.user.is_authenticated:
+        return redirect("login")
+
+    role = getattr(request.user, "role", None)
+    if role not in ("manager", "secretary"):
+        messages.error(request, "فقط مدیر و منشی می‌توانند جلسه را لغو کنند.")
+        return redirect("dashboard")
+
+    session = get_object_or_404(Session, pk=pk)
+
+    if session.status not in ("scheduled", "paused"):
+        messages.error(
+            request,
+            "فقط جلسات زمان‌بندی‌شده یا در وقفه قابل لغو هستند."
+        )
+        return redirect("session_detail", pk=session.pk)
+
+    client_name = session.client.full_name
+    session.status = "cancelled"
+    session.save(update_fields=["status"])
+
+    log_action(
+        request, "cancel_session", session,
+        description=f"لغو جلسهٔ {client_name}",
+    )
+    messages.success(request, f"جلسهٔ «{client_name}» لغو شد.")
+    return redirect("session_list")

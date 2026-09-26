@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}گزارش مشاوران{% endblock %}
+
+{% block header %}<i class="bi bi-graph-up-arrow"></i> گزارش مشاوران{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ from_date|jalali }} تا {{ to_date|jalali }}</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-bar {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1rem 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: 1.5rem;
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .filter-chip {
+        display: inline-flex; align-items: center; gap: .3rem;
+        padding: .4rem .85rem;
+        border-radius: 999px;
+        background: #f1f5f9; color: #475569;
+        font-size: .8rem;
+        text-decoration: none;
+        transition: all .15s;
+    }
+    .filter-chip:hover { background: #e2e8f0; color: #0f172a; }
+    .filter-chip.active {
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        color: #fff;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .stat-box {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-right: 4px solid #2563eb;
+    }
+    .stat-box.green { border-right-color: #10b981; }
+    .stat-box.orange { border-right-color: #f59e0b; }
+    .stat-box.purple { border-right-color: #8b5cf6; }
+    .stat-box .value {
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .stat-box .label {
+        font-size: .78rem;
+        color: #64748b;
+    }
+
+    .consultant-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        border-right: 5px solid #2563eb;
+    }
+
+    .consultant-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: .75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .consultant-name {
+        font-size: 1.05rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+
+    .consultant-avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #06b6d4, #2563eb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .consultant-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: .75rem;
+    }
+
+    .metric {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: .75rem;
+        text-align: center;
+    }
+    .metric-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+    .metric-label {
+        font-size: .72rem;
+        color: #64748b;
+        margin-top: .15rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== فیلترها ===== -->
+<form method="get" class="filter-bar">
+    <div>
+        <select name="consultant" class="form-select" onchange="this.form.submit()">
+            <option value="">همهٔ مشاوران</option>
+            {% for c in consultants %}
+                <option value="{{ c.id }}"
+                    {% if request.GET.consultant == c.id|stringformat:"s" %}selected{% endif %}>
+                    {{ c.get_full_name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="d-flex gap-1 ms-auto">
+        <a href="?days=7{% if request.GET.consultant %}&consultant={{ request.GET.consultant }}{% endif %}"
+           class="filter-chip {% if days == 7 %}active{% endif %}">هفته</a>
+        <a href="?days=30{% if request.GET.consultant %}&consultant={{ request.GET.consultant }}{% endif %}"
+           class="filter-chip {% if days == 30 %}active{% endif %}">ماه</a>
+        <a href="?days=90{% if request.GET.consultant %}&consultant={{ request.GET.consultant }}{% endif %}"
+           class="filter-chip {% if days == 90 %}active{% endif %}">۳ ماه</a>
+        <a href="?days=365{% if request.GET.consultant %}&consultant={{ request.GET.consultant }}{% endif %}"
+           class="filter-chip {% if days == 365 %}active{% endif %}">سال</a>
+    </div>
+</form>
+
+<!-- ===== آمار کل ===== -->
+<div class="stats-grid">
+    <div class="stat-box green">
+        <div class="value">{{ total_sessions|pnum }}</div>
+        <div class="label">جلسات انجام‌شده</div>
+    </div>
+    <div class="stat-box orange">
+        <div class="value">{{ total_minutes|pnum }}</div>
+        <div class="label">مجموع دقایق</div>
+    </div>
+    <div class="stat-box purple">
+        <div class="value">{{ total_revenue|pnum }}</div>
+        <div class="label">مجموع درآمد (تومان)</div>
+    </div>
+</div>
+
+<!-- ===== کارت هر مشاور ===== -->
+{% for r in reports %}
+<div class="consultant-card">
+    <div class="consultant-header">
+        <div class="d-flex align-items-center gap-2">
+            <div class="consultant-avatar">{{ r.consultant.first_name|first }}</div>
+            <div>
+                <div class="consultant-name">{{ r.consultant.get_full_name }}</div>
+                {% if r.consultant.consultant_level %}
+                    <div class="text-muted small">{{ r.consultant.consultant_level.name }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="consultant-metrics">
+        <div class="metric">
+            <div class="metric-value">{{ r.completed_sessions|pnum }}</div>
+            <div class="metric-label">جلسه</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value">{{ r.total_minutes|pnum }}</div>
+            <div class="metric-label">دقیقه</div>
+        </div>
+        <div class="metric">
+            <div class="metric-value">{{ r.total_revenue|pnum }}</div>
+            <div class="metric-label">درآمد (تومان)</div>
+        </div>
+        {% if r.total_minutes > 0 %}
+        <div class="metric">
+            <div class="metric-value">
+                {% widthratio r.total_revenue r.total_minutes 1 as per_min %}
+                {{ per_min|pnum }}
+            </div>
+            <div class="metric-label">تومان/دقیقه</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="empty-state">
+    <i class="bi bi-graph-down"></i>
+    <div>در این بازه جلسه‌ای ثبت نشده است.</div>
+</div>
+{% endfor %}
+
+{% endblock %}

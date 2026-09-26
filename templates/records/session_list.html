@@ -20,11 +20,11 @@
     .filter-bar {
         background: #fff;
         border-radius: 14px;
-        padding: 1rem 1.25rem;
+        padding: .75rem 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         display: flex;
-        gap: .75rem;
+        gap: .5rem;
         flex-wrap: wrap;
         align-items: center;
     }
@@ -32,47 +32,41 @@
     .filter-chip {
         display: inline-flex;
         align-items: center;
-        gap: .3rem;
-        padding: .4rem .85rem;
+        gap: .25rem;
+        padding: .3rem .7rem;
         border-radius: 999px;
         background: #f1f5f9;
         color: #475569;
-        font-size: .8rem;
+        font-size: .75rem;
         text-decoration: none;
         transition: all .15s;
         border: 1px solid transparent;
     }
 
-    .filter-chip:hover {
-        background: #e2e8f0;
-        color: #0f172a;
-    }
-
+    .filter-chip:hover { background: #e2e8f0; color: #0f172a; }
     .filter-chip.active {
         background: linear-gradient(135deg, #2563eb, #1e40af);
         color: #fff;
     }
 
+    /* ===== ردیف جلسه ===== */
     .session-row {
         background: #fff;
-        border-radius: 14px;
-        padding: 1rem 1.25rem;
-        margin-bottom: .75rem;
+        border-radius: 12px;
+        padding: .75rem .9rem;
+        margin-bottom: .5rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 1rem;
+        grid-template-columns: 90px 1fr auto;
+        gap: .75rem;
         align-items: center;
         transition: all .2s;
         border-right: 4px solid #cbd5e1;
-        text-decoration: none;
-        color: inherit;
+        position: relative;
     }
 
     .session-row:hover {
         box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-        transform: translateY(-1px);
-        color: inherit;
     }
 
     .session-row[data-status="scheduled"]   { border-right-color: #94a3b8; }
@@ -83,59 +77,83 @@
     .session-row[data-status="cancelled"]   { border-right-color: #ef4444; opacity: .65; }
     .session-row[data-status="no_show"]     { border-right-color: #ef4444; opacity: .65; }
 
+    /* ===== لینک سراسری ===== */
+    .session-link {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        border-radius: 12px;
+    }
+
+    /* ===== جعبهٔ زمان ===== */
     .session-time-box {
         text-align: center;
-        padding: .5rem .75rem;
+        padding: .35rem .5rem;
         background: #f8fafc;
-        border-radius: 10px;
-        min-width: 100px;
+        border-radius: 9px;
+        position: relative;
+        z-index: 2;
+        pointer-events: none;
     }
 
     .session-time-box .hour {
-        font-size: 1.05rem;
+        font-size: .95rem;
         font-weight: 700;
         color: #0f172a;
         font-family: 'Courier New', monospace;
     }
 
     .session-time-box .date {
-        font-size: .72rem;
+        font-size: .68rem;
         color: #64748b;
-        margin-top: 2px;
+        margin-top: 1px;
     }
 
     .session-main {
         min-width: 0;
+        position: relative;
+        z-index: 2;
+        pointer-events: none;
     }
 
     .session-client {
         font-weight: 700;
         color: #0f172a;
-        font-size: .95rem;
+        font-size: .88rem;
         display: flex;
         align-items: center;
-        gap: .4rem;
-        margin-bottom: .2rem;
+        gap: .35rem;
+        margin-bottom: .1rem;
     }
 
     .session-meta {
-        font-size: .8rem;
+        font-size: .74rem;
         color: #64748b;
         display: flex;
-        gap: .75rem;
+        gap: .6rem;
         flex-wrap: wrap;
     }
 
     .session-meta span {
         display: inline-flex;
         align-items: center;
-        gap: .25rem;
+        gap: .2rem;
+    }
+
+    /* ===== ستون وضعیت و دکمه‌ها ===== */
+    .session-actions-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: .35rem;
+        position: relative;
+        z-index: 3;
     }
 
     .session-status-badge {
-        padding: .3rem .7rem;
+        padding: .2rem .55rem;
         border-radius: 999px;
-        font-size: .72rem;
+        font-size: .68rem;
         font-weight: 600;
         white-space: nowrap;
     }
@@ -150,22 +168,53 @@
     .session-fee {
         font-weight: 700;
         color: #0f172a;
-        font-size: .88rem;
-        text-align: left;
+        font-size: .78rem;
+    }
+
+    .session-list-actions {
+        display: flex;
+        gap: .25rem;
+    }
+
+    .session-list-actions a,
+    .session-list-actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 7px;
+        border: none;
+        background: #f1f5f9;
+        color: #475569;
+        cursor: pointer;
+        transition: all .15s;
+        font-size: .78rem;
+        position: relative;
+        z-index: 3;
+    }
+
+    .session-list-actions .btn-icon-edit:hover {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    .session-list-actions .btn-icon-delete:hover {
+        background: #fee2e2;
+        color: #dc2626;
     }
 
     .empty-sessions {
         background: #fff;
         border-radius: 16px;
-        padding: 3rem 1rem;
+        padding: 2.5rem 1rem;
         text-align: center;
         color: #94a3b8;
     }
     .empty-sessions i {
-        font-size: 3.5rem;
+        font-size: 3rem;
         color: #cbd5e1;
         display: block;
-        margin-bottom: 1rem;
+        margin-bottom: .75rem;
     }
 </style>
 {% endblock %}
@@ -174,13 +223,13 @@
 
 <!-- ============ فیلترها ============ -->
 <form method="get" class="filter-bar">
-    <div style="flex:1; min-width: 200px;">
+    <div style="flex:1; min-width: 180px;">
         <input type="text" name="q" value="{{ q }}" class="form-control"
                placeholder="جست‌وجوی مراجع یا مشاور..." autocomplete="off">
     </div>
 
     <div>
-        <select name="status" class="form-select" onchange="this.form.submit()">
+        <select name="status" class="form-select" onchange="this.form.submit()" style="min-width:140px;">
             <option value="">همهٔ وضعیت‌ها</option>
             <option value="scheduled" {% if status_filter == "scheduled" %}selected{% endif %}>زمان‌بندی‌شده</option>
             <option value="in_progress" {% if status_filter == "in_progress" %}selected{% endif %}>در حال اجرا</option>
@@ -193,7 +242,7 @@
 
     {% if consultants %}
     <div>
-        <select name="consultant" class="form-select" onchange="this.form.submit()">
+        <select name="consultant" class="form-select" onchange="this.form.submit()" style="min-width:150px;">
             <option value="">همهٔ مشاوران</option>
             {% for c in consultants %}
                 <option value="{{ c.id }}" {% if consultant_filter == c.id|stringformat:"s" %}selected{% endif %}>
@@ -204,19 +253,19 @@
     </div>
     {% endif %}
 
-    <button type="submit" class="btn btn-primary">
+    <button type="submit" class="btn btn-primary btn-sm">
         <i class="bi bi-search"></i>
     </button>
 
     <div class="d-flex gap-1 ms-auto">
         <a href="?date=today" class="filter-chip {% if date_filter == 'today' %}active{% endif %}">
-            <i class="bi bi-calendar-day"></i> امروز
+            امروز
         </a>
         <a href="?date=week" class="filter-chip {% if date_filter == 'week' %}active{% endif %}">
-            <i class="bi bi-calendar-week"></i> هفته
+            هفته
         </a>
         <a href="?date=month" class="filter-chip {% if date_filter == 'month' %}active{% endif %}">
-            <i class="bi bi-calendar-month"></i> ماه
+            ماه
         </a>
         <a href="{% url 'session_list' %}" class="filter-chip {% if not date_filter %}active{% endif %}">
             همه
@@ -227,7 +276,10 @@
 <!-- ============ لیست جلسات ============ -->
 {% if sessions %}
     {% for s in sessions %}
-    <a href="{% url 'session_detail' s.pk %}" class="session-row" data-status="{{ s.status }}">
+    <div class="session-row" data-status="{{ s.status }}">
+        <!-- لینک کلیک سراسری -->
+        <a href="{% url 'session_detail' s.pk %}" class="session-link" aria-label="جزئیات جلسه"></a>
+
         <div class="session-time-box">
             <div class="hour">{{ s.scheduled_start|jalali_time }}</div>
             <div class="date">{{ s.scheduled_start|jalali_short }}</div>
@@ -237,7 +289,7 @@
             <div class="session-client">
                 <i class="bi bi-person-circle" style="color:#2563eb;"></i>
                 {{ s.client.full_name }}
-                <span class="text-muted small" style="font-weight:400;">#{{ s.client.file_number }}</span>
+                <span class="text-muted" style="font-weight:400; font-size:.72rem;">#{{ s.client.file_number }}</span>
             </div>
             <div class="session-meta">
                 <span><i class="bi bi-person-badge"></i> {{ s.consultant.get_full_name }}</span>
@@ -251,15 +303,32 @@
             </div>
         </div>
 
-        <div class="d-flex flex-column align-items-end gap-1">
+        <div class="session-actions-col">
             <span class="session-status-badge status-{{ s.status }}">
                 {{ s.get_status_display }}
             </span>
             {% if s.final_fee %}
                 <span class="session-fee">{{ s.final_fee|pnum }} تومان</span>
             {% endif %}
+
+            {% if s.status == "scheduled" or s.status == "paused" %}
+            <div class="session-list-actions">
+                <a href="{% url 'session_edit' s.pk %}" class="btn-icon-edit" title="ویرایش">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <form method="post" action="{% url 'session_delete' s.pk %}"
+                      style="margin:0; display:inline-flex;"
+                      id="delete-form-{{ s.pk }}">
+                    {% csrf_token %}
+                    <button type="button" class="btn-icon-delete" title="لغو جلسه"
+                            onclick="confirmDeleteSession({{ s.pk }}, '{{ s.client.full_name|escapejs }}');">
+                        <i class="bi bi-x-circle"></i>
+                    </button>
+                </form>
+            </div>
+            {% endif %}
         </div>
-    </a>
+    </div>
     {% endfor %}
 {% else %}
 <div class="empty-sessions">
@@ -272,4 +341,21 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function confirmDeleteSession(sessionId, clientName) {
+    var ok = await showConfirm({
+        type: 'danger',
+        title: 'لغو جلسه',
+        message: 'آیا جلسهٔ «' + clientName + '» لغو شود؟ این عمل قابل بازگشت نیست.',
+        okText: 'بله، لغو کن',
+        cancelText: 'انصراف'
+    });
+    if (ok) {
+        document.getElementById('delete-form-' + sessionId).submit();
+    }
+}
+</script>
 {% endblock %}

@@ -1,10 +1,13 @@
 {% extends "base.html" %}
+{% load jalali_tags %}
 
 {% block title %}اتاق‌ها{% endblock %}
 
 {% block header %}<i class="bi bi-door-open"></i> اتاق‌ها{% endblock %}
 {% block subtitle %}
-<div class="page-subtitle">{{ total }} اتاق ثبت شده — {{ rooms_data|length }} مورد نمایش</div>
+<div class="page-subtitle">
+    {{ total }} اتاق ثبت شده — {{ today|jalali_full }}
+</div>
 {% endblock %}
 
 {% block topbar_actions %}
@@ -26,21 +29,21 @@
 <style>
     .rooms-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 1rem;
     }
 
     .room-card {
         background: #fff;
         border-radius: 16px;
-        padding: 1.25rem;
+        padding: 1.15rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         border-top: 4px solid #cbd5e1;
         transition: all .25s ease;
         position: relative;
         display: flex;
         flex-direction: column;
-        min-height: 180px;
+        min-height: 190px;
     }
 
     .room-card:hover {
@@ -48,16 +51,20 @@
         box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
 
-    .room-card[data-active="true"] { border-top-color: var(--primary); }
+    .room-card[data-status="free"]         { border-top-color: #10b981; }
+    .room-card[data-status="scheduled"]    { border-top-color: #2563eb; }
+    .room-card[data-status="in_session"]   { border-top-color: #f59e0b; }
     .room-card[data-active="false"] {
         opacity: 0.55;
         border-top-color: #cbd5e1;
         filter: grayscale(0.5);
     }
 
-    .room-card[data-occupied="true"] {
-        border-top-color: #10b981;
-        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    .room-card[data-status="in_session"] {
+        background: linear-gradient(135deg, #ffffff 0%, #fffbeb 100%);
+    }
+    .room-card[data-status="scheduled"] {
+        background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
     }
 
     .room-header {
@@ -86,13 +93,27 @@
 
     .room-status-badge {
         font-size: .68rem;
-        padding: .2rem .6rem;
+        padding: .25rem .65rem;
         border-radius: 999px;
         font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: .3rem;
     }
-    .room-status-badge.free { background: rgba(16,185,129,0.12); color: #10b981; }
-    .room-status-badge.busy { background: rgba(245,158,11,0.12); color: #d97706; }
-    .room-status-badge.off  { background: rgba(100,116,139,0.12); color: #64748b; }
+    .room-status-badge.free         { background: rgba(16,185,129,0.12); color: #10b981; }
+    .room-status-badge.scheduled    { background: rgba(37,99,235,0.12); color: #2563eb; }
+    .room-status-badge.in_session   { background: rgba(245,158,11,0.15); color: #d97706; }
+    .room-status-badge.off          { background: rgba(100,116,139,0.12); color: #64748b; }
+
+    .room-status-badge .dot {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    .room-status-badge.in_session .dot {
+        animation: blink 1.2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
 
     .room-body {
         flex: 1;
@@ -111,23 +132,36 @@
 
     .room-info-row i { color: #94a3b8; width: 16px; }
 
-    .room-current {
-        background: #f0fdf4;
-        border-right: 3px solid #10b981;
-        padding: .5rem .7rem;
-        border-radius: 8px;
+    /* ===== کادر وضعیت ===== */
+    .room-live {
+        border-radius: 10px;
+        padding: .65rem .8rem;
         margin-top: .5rem;
+        border-right: 3px solid;
     }
-    .room-current .name {
-        font-weight: 600;
-        color: #065f46;
-        font-size: .82rem;
+    .room-live.in_session {
+        background: #fef3c7;
+        border-right-color: #f59e0b;
     }
-    .room-current .sub {
+    .room-live.scheduled {
+        background: #dbeafe;
+        border-right-color: #2563eb;
+    }
+    .room-live .name {
+        font-weight: 700;
+        font-size: .85rem;
+        margin-bottom: .2rem;
+    }
+    .room-live.in_session .name { color: #92400e; }
+    .room-live.scheduled .name { color: #1e40af; }
+    .room-live .sub {
         font-size: .72rem;
-        color: #10b981;
+        opacity: .8;
     }
+    .room-live.in_session .sub { color: #b45309; }
+    .room-live.scheduled .sub { color: #3b82f6; }
 
+    /* ===== دکمه‌ها ===== */
     .room-actions {
         display: flex;
         gap: .4rem;
@@ -145,23 +179,8 @@
     }
     .rooms-grid.sort-mode .room-card:active { cursor: grabbing; }
     .rooms-grid.sort-mode .room-card .room-actions { display: none; }
-    .rooms-grid.sort-mode .room-card::before {
-        content: "⋮⋮";
-        position: absolute;
-        top: 50%;
-        right: -12px;
-        transform: translateY(-50%);
-        font-size: 1.2rem;
-        color: #94a3b8;
-        letter-spacing: -3px;
-        line-height: 1;
-    }
 
-    .room-card.dragging {
-        opacity: 0.4;
-        transform: scale(0.95);
-    }
-
+    .room-card.dragging { opacity: 0.4; transform: scale(0.95); }
     .room-card.drag-over {
         border-color: var(--primary);
         background: rgba(37, 99, 235, 0.05);
@@ -203,7 +222,7 @@
         <div class="room-card"
              data-room-id="{{ room.id }}"
              data-active="{{ room.is_active|yesno:'true,false' }}"
-             data-occupied="{{ item.is_occupied|yesno:'true,false' }}"
+             data-status="{% if not room.is_active %}off{% else %}{{ item.status }}{% endif %}"
              draggable="false">
 
             <div class="room-header">
@@ -211,12 +230,23 @@
                     <span class="room-color" style="background:{{ room.color }};"></span>
                     {{ room.name }}
                 </h3>
+
                 {% if not room.is_active %}
-                    <span class="room-status-badge off">غیرفعال</span>
-                {% elif item.is_occupied %}
-                    <span class="room-status-badge busy">در جلسه</span>
+                    <span class="room-status-badge off">
+                        <span class="dot"></span> غیرفعال
+                    </span>
+                {% elif item.status == "in_session" %}
+                    <span class="room-status-badge in_session">
+                        <span class="dot"></span> در جلسه
+                    </span>
+                {% elif item.status == "scheduled" %}
+                    <span class="room-status-badge scheduled">
+                        <span class="dot"></span> جلسهٔ بعدی
+                    </span>
                 {% else %}
-                    <span class="room-status-badge free">آزاد</span>
+                    <span class="room-status-badge free">
+                        <span class="dot"></span> آزاد
+                    </span>
                 {% endif %}
             </div>
 
@@ -234,9 +264,23 @@
                 {% endif %}
 
                 {% if item.current_session %}
-                <div class="room-current">
-                    <div class="name">{{ item.current_session.consultant.get_full_name }}</div>
-                    <div class="sub">{{ item.current_session.client.full_name }}</div>
+                <div class="room-live in_session">
+                    <div class="name">
+                        <i class="bi bi-broadcast"></i> {{ item.current_session.consultant.get_full_name }}
+                    </div>
+                    <div class="sub">
+                        در جلسه با {{ item.current_session.client.full_name }}
+                    </div>
+                </div>
+                {% elif item.next_session %}
+                <div class="room-live scheduled">
+                    <div class="name">
+                        <i class="bi bi-clock-history"></i> {{ item.next_session.consultant.get_full_name }}
+                    </div>
+                    <div class="sub">
+                        جلسهٔ بعدی: {{ item.next_session.scheduled_start|jalali_time }}
+                        — {{ item.next_session.client.full_name }}
+                    </div>
                 </div>
                 {% endif %}
             </div>
@@ -277,9 +321,6 @@
 
 {% block extra_js %}
 <script>
-// ==================================================
-// حالت تنظیم ترتیب
-// ==================================================
 let sortMode = false;
 let dragSrcEl = null;
 
@@ -298,7 +339,6 @@ function toggleSortMode() {
     btnSave.classList.remove('d-none');
     btnCancel.classList.remove('d-none');
 
-    // فعال‌سازی drag روی همه کارت‌ها
     grid.querySelectorAll('.room-card').forEach(card => {
         card.setAttribute('draggable', 'true');
         card.addEventListener('dragstart', handleDragStart);
@@ -309,9 +349,7 @@ function toggleSortMode() {
     });
 }
 
-function cancelSort() {
-    location.reload();
-}
+function cancelSort() { location.reload(); }
 
 function handleDragStart(e) {
     dragSrcEl = this;
@@ -323,14 +361,10 @@ function handleDragStart(e) {
 function handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    if (this !== dragSrcEl) {
-        this.classList.add('drag-over');
-    }
+    if (this !== dragSrcEl) this.classList.add('drag-over');
 }
 
-function handleDragLeave(e) {
-    this.classList.remove('drag-over');
-}
+function handleDragLeave(e) { this.classList.remove('drag-over'); }
 
 function handleDrop(e) {
     e.preventDefault();
@@ -338,7 +372,6 @@ function handleDrop(e) {
     this.classList.remove('drag-over');
 
     if (dragSrcEl !== this) {
-        // جابه‌جایی در DOM
         const allCards = [...grid.querySelectorAll('.room-card')];
         const srcIdx = allCards.indexOf(dragSrcEl);
         const dstIdx = allCards.indexOf(this);
@@ -368,7 +401,7 @@ async function saveOrder() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCsrfToken(),
+                'X-CSRFToken': getCsrf(),
             },
             body: JSON.stringify({ order: order }),
         });
@@ -388,15 +421,10 @@ async function saveOrder() {
     }
 }
 
-// ==================================================
-// ابزار CSRF
-// ==================================================
-function getCsrfToken() {
-    const el = document.querySelector('[name=csrfmiddlewaretoken]');
-    if (el) return el.value;
-    // از cookie
-    const match = document.cookie.match(/csrftoken=([^;]+)/);
-    return match ? match[1] : '';
-}
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        location.reload();
+    }
+}, 15000);
 </script>
 {% endblock %}

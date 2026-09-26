@@ -6,16 +6,6 @@ from .models import User, Role, ConsultantLevel
 
 
 # ==================================================
-# پیام‌های خطای فارسی مشترک
-# ==================================================
-
-REQUIRED_MSG = "پر کردن این فیلد الزامی است."
-INVALID_MSG = "مقدار وارد شده معتبر نیست."
-UNIQUE_MSG = "این مقدار قبلاً ثبت شده است."
-MIN_LENGTH_MSG = "این مقدار باید حداقل {n} کاراکتر باشد."
-
-
-# ==================================================
 # فرم‌های کاربر
 # ==================================================
 
@@ -78,6 +68,21 @@ class UserCreateForm(forms.ModelForm):
             "role": {"required": "انتخاب نقش الزامی است."},
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ===== placeholder فارسی برای select ها =====
+        for fname in ["role", "consultant_level"]:
+            if fname in self.fields:
+                self.fields[fname].empty_label = "— انتخاب کنید —"
+                self.fields[fname].widget.attrs.pop("required", None)
+
+        # برای role که ChoiceField هست
+        if "role" in self.fields:
+            current_choices = list(self.fields["role"].choices)
+            current_choices = [c for c in current_choices if c[0] != ""]
+            self.fields["role"].choices = [("", "— انتخاب کنید —")] + current_choices
+
     def clean_first_name(self):
         name = self.cleaned_data.get("first_name", "").strip()
         if len(name) < 2:
@@ -132,7 +137,6 @@ class UserCreateForm(forms.ModelForm):
             try:
                 validate_password(p1)
             except ValidationError as e:
-                # ترجمهٔ پیام‌های Django به فارسی
                 messages_map = {
                     "This password is too short. It must contain at least 8 characters.":
                         "رمز عبور باید حداقل ۸ کاراکتر باشد.",
@@ -190,6 +194,21 @@ class UserEditForm(forms.ModelForm):
             "last_name": {"required": "وارد کردن نام خانوادگی الزامی است."},
             "national_code": {"required": "وارد کردن کد ملی الزامی است."},
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # ===== placeholder فارسی برای select ها =====
+        for fname in ["role", "consultant_level"]:
+            if fname in self.fields:
+                self.fields[fname].empty_label = "— انتخاب کنید —"
+                self.fields[fname].widget.attrs.pop("required", None)
+
+        # برای role که ChoiceField هست
+        if "role" in self.fields:
+            current_choices = list(self.fields["role"].choices)
+            current_choices = [c for c in current_choices if c[0] != ""]
+            self.fields["role"].choices = [("", "— انتخاب کنید —")] + current_choices
 
     def clean_national_code(self):
         code = self.cleaned_data.get("national_code", "").strip()

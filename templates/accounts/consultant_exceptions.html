@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}مرخصی و استثناها{% endblock %}
+
+{% block header %}<i class="bi bi-calendar-x"></i> مرخصی و استثناها{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ consultant.get_full_name }}</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'consultant_month_schedule' consultant.pk %}" class="btn btn-primary">
+        <i class="bi bi-calendar3"></i> تقویم ماهانه
+    </a>
+    <a href="{% url 'consultant_weekly_schedule' consultant.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-calendar-week"></i> الگوی هفتگی
+    </a>
+    {% if is_self %}
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% else %}
+        <a href="{% url 'consultants_schedule_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .info-note {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-right: 4px solid #2563eb;
+        border-radius: 10px;
+        padding: .65rem .9rem;
+        font-size: .78rem;
+        color: #1e40af;
+        margin-bottom: .85rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        line-height: 1.7;
+    }
+    .info-note i { font-size: 1rem; flex-shrink: 0; }
+
+    /* ===== فرم افزودن ===== */
+    .add-form-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: .85rem;
+        border-top: 4px solid #2563eb;
+    }
+
+    .add-form-title {
+        font-size: .92rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        margin-bottom: .85rem;
+    }
+    .add-form-title i { color: #2563eb; }
+
+    .type-selector {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+        margin-bottom: .75rem;
+    }
+    .type-btn {
+        padding: .55rem .75rem;
+        border-radius: 9px;
+        background: #fff;
+        border: 2px solid #e2e8f0;
+        color: #475569;
+        font-size: .82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+    }
+    .type-btn:hover { border-color: #cbd5e1; background: #f8fafc; }
+    .type-btn.active {
+        border-color: #2563eb;
+        background: rgba(37, 99, 235, 0.06);
+        color: #2563eb;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .65rem;
+        margin-bottom: .65rem;
+    }
+
+    .field-box {
+        background: #f8fafc;
+        border-radius: 9px;
+        padding: .55rem .7rem;
+        border-right: 3px solid #e2e8f0;
+    }
+    .field-box label {
+        font-size: .72rem;
+        font-weight: 600;
+        color: #64748b;
+        display: block;
+        margin-bottom: .25rem;
+    }
+    .field-box input,
+    .field-box select {
+        width: 100%;
+        border-radius: 7px;
+        border: 1.5px solid #e2e8f0;
+        padding: .35rem .55rem;
+        font-size: .85rem;
+        background: #fff;
+        font-family: inherit;
+    }
+    .field-box input:focus,
+    .field-box select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+
+    .special-hours-fields {
+        display: none;
+        grid-template-columns: 1fr 1fr;
+        gap: .65rem;
+        margin-bottom: .65rem;
+    }
+    .special-hours-fields.show { display: grid; }
+
+    /* ===== لیست استثناها ===== */
+    .exception-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: .85rem 1rem;
+        margin-bottom: .55rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        display: grid;
+        grid-template-columns: 52px 1fr auto;
+        gap: .85rem;
+        align-items: center;
+        border-right: 4px solid #f59e0b;
+        transition: all .2s;
+    }
+
+    .exception-card:hover {
+        box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    .exception-card[data-status="past"] {
+        opacity: .55;
+        filter: grayscale(0.6);
+    }
+
+    .exception-card[data-status="current"] {
+        border-right-color: #ef4444;
+        background: linear-gradient(135deg, #fef2f2 0%, #fff 100%);
+    }
+
+    .exception-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        background: rgba(245,158,11,.12);
+        color: #d97706;
+        flex-shrink: 0;
+    }
+    .exception-card[data-status="current"] .exception-icon {
+        background: rgba(239,68,68,.12);
+        color: #dc2626;
+    }
+
+    .exception-body { min-width: 0; }
+
+    .exception-dates {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: .92rem;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        flex-wrap: wrap;
+    }
+
+    .days-pill {
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: .68rem;
+        padding: .1rem .5rem;
+        border-radius: 999px;
+        font-weight: 500;
+    }
+
+    .exception-meta {
+        font-size: .78rem;
+        color: #64748b;
+        margin-top: .25rem;
+        display: flex;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+
+    .exception-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+    }
+
+    .current-badge {
+        background: #ef4444;
+        color: #fff;
+        font-size: .65rem;
+        padding: .15rem .55rem;
+        border-radius: 999px;
+        font-weight: 600;
+        animation: blink 1.5s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    .empty-exceptions {
+        background: #fff;
+        border-radius: 14px;
+        padding: 2rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+    }
+    .empty-exceptions i {
+        font-size: 2.5rem;
+        color: #cbd5e1;
+        display: block;
+        margin-bottom: .6rem;
+    }
+
+    @media (max-width: 767px) {
+        .form-row, .special-hours-fields { grid-template-columns: 1fr; }
+        .exception-card { grid-template-columns: 42px 1fr; }
+        .exception-card form { grid-column: 1 / -1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== راهنما ===== -->
+<div class="info-note">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>
+        این بخش برای <strong>تغییرات موقت</strong> است. مثلاً:
+        «۲۶ و ۲۷ مهر مرخصی»، یا «فقط روز سه‌شنبه ۵ مهر از ۱۰ تا ۱۲ هستم».
+        برای تغییر دائمی به <a href="{% url 'consultant_weekly_schedule' consultant.pk %}" style="color: #1e40af; font-weight: 700;">الگوی هفتگی</a> بروید.
+    </div>
+</div>
+
+<!-- ===== فرم افزودن ===== -->
+<div class="add-form-card">
+    <div class="add-form-title">
+        <i class="bi bi-plus-circle-fill"></i>
+        افزودن استثنا
+    </div>
+
+    <form method="post" action="{% url 'consultant_exception_create' consultant.pk %}" id="exception-form">
+        {% csrf_token %}
+
+        <!-- نوع استثنا -->
+        <div class="type-selector">
+            <button type="button" class="type-btn active" data-type="off" onclick="selectType('off')">
+                <i class="bi bi-calendar-x-fill"></i>
+                تعطیل / مرخصی
+            </button>
+            <button type="button" class="type-btn" data-type="special" onclick="selectType('special')">
+                <i class="bi bi-clock-fill"></i>
+                ساعت ویژه
+            </button>
+        </div>
+        <input type="hidden" name="exception_type" id="exception_type" value="off">
+
+        <!-- تاریخ -->
+        <div class="form-row">
+            <div class="field-box">
+                <label>از تاریخ</label>
+                <input type="date" name="from_date" id="id_from_date" required>
+            </div>
+            <div class="field-box">
+                <label>تا تاریخ</label>
+                <input type="date" name="to_date" id="id_to_date" required>
+            </div>
+        </div>
+
+        <!-- ساعت ویژه -->
+        <div class="special-hours-fields" id="special-hours-fields">
+            <div class="field-box">
+                <label>ساعت شروع</label>
+                <input type="text" name="custom_start" class="time-24"
+                       placeholder="08:00" maxlength="5">
+            </div>
+            <div class="field-box">
+                <label>ساعت پایان</label>
+                <input type="text" name="custom_end" class="time-24"
+                       placeholder="10:00" maxlength="5">
+            </div>
+        </div>
+
+        <!-- دلیل -->
+        <div class="field-box" style="margin-bottom: .75rem;">
+            <label>دلیل (اختیاری)</label>
+            <input type="text" name="reason"
+                   placeholder="مثلاً: مرخصی استحقاقی، جلسهٔ اداری، سمینار" maxlength="200">
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle-fill"></i> ثبت استثنا
+        </button>
+    </form>
+</div>
+
+<!-- ===== لیست استثناها ===== -->
+{% if exceptions_data %}
+    {% for item in exceptions_data %}
+    <div class="exception-card" data-status="{{ item.status }}">
+        <div class="exception-icon">
+            {% if item.exc.is_off %}
+                <i class="bi bi-calendar-x-fill"></i>
+            {% else %}
+                <i class="bi bi-clock-fill"></i>
+            {% endif %}
+        </div>
+
+        <div class="exception-body">
+            <div class="exception-dates">
+                {% if item.exc.from_date == item.exc.to_date %}
+                    {{ item.exc.from_date|jalali_full }}
+                {% else %}
+                    {{ item.exc.from_date|jalali }} تا {{ item.exc.to_date|jalali }}
+                {% endif %}
+                <span class="days-pill">{{ item.days_count }} روز</span>
+                {% if item.status == "current" %}
+                    <span class="current-badge">جاری</span>
+                {% endif %}
+            </div>
+
+            <div class="exception-meta">
+                {% if item.exc.is_off %}
+                    <span><i class="bi bi-x-circle"></i> تعطیل کامل</span>
+                {% else %}
+                    <span>
+                        <i class="bi bi-clock"></i>
+                        ساعت ویژه: {{ item.exc.custom_start|time:"H:i" }} — {{ item.exc.custom_end|time:"H:i" }}
+                    </span>
+                {% endif %}
+
+                {% if item.exc.reason %}
+                    <span><i class="bi bi-chat-left-text"></i> {{ item.exc.reason }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <form method="post"
+              action="{% url 'consultant_exception_delete' consultant.pk item.exc.pk %}"
+              style="margin:0;">
+            {% csrf_token %}
+            <button type="button" class="btn btn-sm btn-outline-danger"
+                    onclick="confirmDeleteException(this, '{{ item.exc.from_date|jalali }}');">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="empty-exceptions">
+    <i class="bi bi-calendar-check"></i>
+    <div>هیچ استثنایی ثبت نشده است.</div>
+    <div style="font-size: .8rem; margin-top: .35rem;">الگوی هفتگی مشاور بدون تغییر اعمال می‌شود.</div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==================================================
+// انتخاب نوع استثنا
+// ==================================================
+function selectType(type) {
+    document.querySelectorAll('.type-btn').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+
+    document.getElementById('exception_type').value = type;
+
+    var hoursFields = document.getElementById('special-hours-fields');
+    if (type === 'special') {
+        hoursFields.classList.add('show');
+    } else {
+        hoursFields.classList.remove('show');
+    }
+}
+
+// ==================================================
+// تاریخ پیش‌فرض
+// ==================================================
+(function() {
+    var today = new Date();
+    var yyyy = today.getFullYear();
+    var mm = String(today.getMonth() + 1).padStart(2, '0');
+    var dd = String(today.getDate()).padStart(2, '0');
+    var iso = yyyy + '-' + mm + '-' + dd;
+
+    var fromInput = document.getElementById('id_from_date');
+    var toInput = document.getElementById('id_to_date');
+
+    fromInput.value = iso;
+    toInput.value = iso;
+    fromInput.setAttribute('min', iso);
+
+    fromInput.addEventListener('change', function() {
+        toInput.setAttribute('min', this.value);
+        if (toInput.value < this.value) toInput.value = this.value;
+    });
+})();
+
+// ==================================================
+// input زمان ۲۴ ساعته
+// ==================================================
+document.querySelectorAll('.time-24').forEach(function(input) {
+    input.addEventListener('input', function() {
+        var v = this.value
+            .replace(/[۰-۹]/g, function(d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+            .replace(/[^\d:]/g, '');
+
+        var parts = v.split(':');
+        if (parts.length > 2) v = parts[0] + ':' + parts.slice(1).join('');
+        if (parts[0] && parts[0].length === 2 && !v.includes(':') && v.length === 2) {
+            v = v + ':';
+        }
+        if (v.length > 5) v = v.substring(0, 5);
+        this.value = v;
+    });
+
+    input.addEventListener('blur', function() {
+        var v = this.value.trim();
+        if (!v) return;
+        if (/^\d{3,4}$/.test(v)) {
+            if (v.length === 3) v = '0' + v[0] + ':' + v.substring(1);
+            else v = v.substring(0, 2) + ':' + v.substring(2);
+        }
+        var m = v.match(/^(\d{1,2}):?(\d{1,2})?$/);
+        if (m) {
+            var h = parseInt(m[1] || 0);
+            var min = parseInt(m[2] || 0);
+            if (h > 23) h = 23;
+            if (min > 59) min = 59;
+            this.value = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+        }
+    });
+});
+
+// ==================================================
+// تأیید حذف
+// ==================================================
+async function confirmDeleteException(btn, dateLabel) {
+    var ok = await showConfirm({
+        type: 'danger',
+        title: 'حذف استثنا',
+        message: 'آیا استثنای «' + dateLabel + '» حذف شود؟',
+        okText: 'بله، حذف کن',
+        cancelText: 'انصراف'
+    });
+    if (ok) btn.closest('form').submit();
+}
+</script>
+{% endblock %}

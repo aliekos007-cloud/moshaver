@@ -1,0 +1,659 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}جست‌وجوی نوبت{% endblock %}
+
+{% block header %}<i class="bi bi-search-heart"></i> جست‌وجوی نوبت{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">نزدیک‌ترین نوبت خالی مشاور را پیدا کنید</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== انتخاب مشاور ===== */
+    .consultant-picker {
+        background: #fff;
+        border-radius: 14px;
+        padding: .85rem 1rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        margin-bottom: .85rem;
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        flex-wrap: wrap;
+    }
+    .consultant-picker label {
+        font-size: .85rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+        white-space: nowrap;
+    }
+    .consultant-picker label i { color: #2563eb; }
+    .consultant-picker select {
+        flex: 1;
+        min-width: 200px;
+        border-radius: 9px;
+        border: 1.5px solid #e2e8f0;
+        padding: .5rem .75rem;
+        font-size: .88rem;
+        background: #fff;
+        font-family: inherit;
+        cursor: pointer;
+    }
+    .consultant-picker select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+        outline: none;
+    }
+
+    /* ===== کارت نزدیک‌ترین نوبت ===== */
+    .nearest-card {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 16px;
+        padding: 1rem 1.25rem;
+        color: #fff;
+        box-shadow: 0 8px 24px rgba(16,185,129,0.25);
+        margin-bottom: .85rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .nearest-card::before {
+        content: "";
+        position: absolute;
+        top: -50%; right: -10%;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .nearest-content {
+        position: relative;
+        z-index: 1;
+    }
+    .nearest-label {
+        font-size: .72rem;
+        opacity: .9;
+        margin-bottom: .2rem;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .nearest-time {
+        font-size: 1.5rem;
+        font-weight: 800;
+        font-family: 'Courier New', monospace;
+        line-height: 1;
+        margin-bottom: .2rem;
+    }
+    .nearest-date {
+        font-size: .85rem;
+        opacity: .95;
+    }
+    .nearest-btn {
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        color: #fff;
+        padding: .55rem 1rem;
+        border-radius: 10px;
+        font-size: .82rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        gap: .35rem;
+        text-decoration: none;
+        position: relative;
+        z-index: 1;
+        white-space: nowrap;
+        backdrop-filter: blur(10px);
+    }
+    .nearest-btn:hover {
+        background: rgba(255,255,255,0.3);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    .no-nearest {
+        background: #f8fafc;
+        border: 1.5px dashed #cbd5e1;
+        border-radius: 14px;
+        padding: 1.5rem;
+        text-align: center;
+        color: #64748b;
+        font-size: .85rem;
+        margin-bottom: .85rem;
+    }
+    .no-nearest i {
+        font-size: 2rem;
+        color: #94a3b8;
+        display: block;
+        margin-bottom: .5rem;
+    }
+
+    /* ===== آمار ===== */
+    .stats-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: .5rem;
+        margin-bottom: .85rem;
+    }
+    .stat-mini-box {
+        background: #fff;
+        border-radius: 11px;
+        padding: .65rem .85rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border-right: 3px solid #10b981;
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+    }
+    .stat-mini-box.orange { border-right-color: #f59e0b; }
+    .stat-mini-box i {
+        font-size: 1.1rem;
+        color: #10b981;
+    }
+    .stat-mini-box.orange i { color: #f59e0b; }
+    .stat-mini-box .value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
+    }
+    .stat-mini-box .label {
+        font-size: .7rem;
+        color: #64748b;
+    }
+
+    /* ===== تقویم ۳۰ روز ===== */
+    .calendar-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: .85rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .calendar-title {
+        font-size: .88rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        margin-bottom: .65rem;
+        padding-bottom: .5rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .calendar-title i { color: #2563eb; }
+
+    .days-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 5px;
+    }
+
+    .day-box {
+        background: #f8fafc;
+        border: 1.5px solid #f1f5f9;
+        border-radius: 9px;
+        padding: .4rem .35rem;
+        cursor: pointer;
+        transition: all .15s;
+        text-align: center;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+
+    .day-box:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-color: #2563eb;
+    }
+
+    .day-box[data-status="free"] {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-color: #10b981;
+    }
+    .day-box[data-status="partial"] {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-color: #f59e0b;
+    }
+    .day-box[data-status="full"],
+    .day-box[data-status="empty"] {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        opacity: .55;
+    }
+    .day-box[data-status="full"]:hover,
+    .day-box[data-status="empty"]:hover {
+        transform: none;
+        box-shadow: none;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+    }
+
+    .day-box.today {
+        border-color: #f59e0b;
+        border-width: 2px;
+    }
+
+    .day-weekday {
+        font-size: .6rem;
+        color: #94a3b8;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .day-num {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
+    }
+    .day-box[data-status="free"] .day-num { color: #065f46; }
+    .day-box[data-status="partial"] .day-num { color: #92400e; }
+
+    .day-free {
+        font-size: .6rem;
+        color: #059669;
+        font-weight: 700;
+        line-height: 1;
+    }
+    .day-box[data-status="partial"] .day-free { color: #d97706; }
+    .day-box[data-status="full"] .day-free,
+    .day-box[data-status="empty"] .day-free { color: #94a3b8; }
+
+    /* ===== مودال اسلات‌ها ===== */
+    .slots-modal-header {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        padding: .9rem 1.15rem;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .slots-modal-title {
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: .15rem;
+    }
+    .slots-modal-sub {
+        font-size: .75rem;
+        opacity: .9;
+    }
+    .slots-modal-close {
+        background: transparent;
+        border: none;
+        color: #fff;
+        opacity: .7;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: .25rem;
+    }
+    .slots-modal-close:hover { opacity: 1; }
+
+    .slots-modal-body {
+        padding: 1rem 1.15rem;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .slots-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: .5rem;
+    }
+
+    .slot-item {
+        background: #fff;
+        border: 1.5px solid #10b981;
+        border-radius: 9px;
+        padding: .55rem .6rem;
+        cursor: pointer;
+        transition: all .15s;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .2rem;
+    }
+
+    .slot-item:hover {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(16,185,129,.15);
+    }
+
+    .slot-time {
+        font-size: .88rem;
+        font-weight: 700;
+        color: #065f46;
+        font-family: 'Courier New', monospace;
+    }
+
+    .slot-duration {
+        font-size: .65rem;
+        color: #10b981;
+        font-weight: 600;
+    }
+
+    .slot-item.booked {
+        background: #f8fafc;
+        border-color: #cbd5e1;
+        cursor: not-allowed;
+        opacity: .6;
+    }
+    .slot-item.booked:hover { transform: none; box-shadow: none; }
+    .slot-item.booked .slot-time { color: #64748b; }
+    .slot-item.booked .slot-duration { color: #94a3b8; }
+
+    .slot-item.past {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+        opacity: .5;
+    }
+    .slot-item.past:hover { transform: none; box-shadow: none; }
+    .slot-item.past .slot-time { color: #94a3b8; }
+
+    .slot-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: #94a3b8;
+    }
+    .slot-empty i {
+        font-size: 2rem;
+        color: #cbd5e1;
+        display: block;
+        margin-bottom: .5rem;
+    }
+
+    .holiday-banner {
+        background: #fef2f2;
+        border-right: 3px solid #ef4444;
+        border-radius: 9px;
+        padding: .55rem .8rem;
+        margin-bottom: .65rem;
+        font-size: .78rem;
+        color: #991b1b;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+
+    /* ===== Empty state ===== */
+    .empty-search {
+        background: #fff;
+        border-radius: 16px;
+        padding: 3rem 1rem;
+        text-align: center;
+        color: #94a3b8;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .empty-search i {
+        font-size: 3rem;
+        color: #cbd5e1;
+        display: block;
+        margin-bottom: .85rem;
+    }
+    .empty-search h5 {
+        color: #475569;
+        font-size: 1rem;
+        margin-bottom: .35rem;
+    }
+    .empty-search p {
+        font-size: .82rem;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== انتخاب مشاور ===== -->
+<form method="get" class="consultant-picker">
+    <label>
+        <i class="bi bi-person-badge"></i>
+        مشاور:
+    </label>
+    <select name="consultant" onchange="this.form.submit()">
+        <option value="">— انتخاب مشاور —</option>
+        {% for c in consultants %}
+            <option value="{{ c.pk }}"
+                    {% if selected_consultant and selected_consultant.pk == c.pk %}selected{% endif %}>
+                {{ c.get_full_name }}
+                {% if c.consultant_level %} — {{ c.consultant_level.name }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+</form>
+
+{% if not selected_consultant %}
+    <div class="empty-search">
+        <i class="bi bi-search"></i>
+        <h5>لطفاً یک مشاور انتخاب کنید</h5>
+        <p>پس از انتخاب، نزدیک‌ترین نوبت خالی و تقویم ۳۰ روز نمایش داده می‌شود.</p>
+    </div>
+
+{% else %}
+
+    <!-- ===== نزدیک‌ترین نوبت ===== -->
+    {% if nearest_slot.found %}
+    <div class="nearest-card">
+        <div class="nearest-content">
+            <div class="nearest-label">
+                <i class="bi bi-lightning-charge-fill"></i>
+                {% if nearest_slot.is_today %}
+                    نزدیک‌ترین نوبت — امروز
+                {% elif nearest_slot.days_ahead == 1 %}
+                    نزدیک‌ترین نوبت — فردا
+                {% else %}
+                    نزدیک‌ترین نوبت — {{ nearest_slot.days_ahead|pnum }} روز آینده
+                {% endif %}
+            </div>
+            <div class="nearest-time">{{ nearest_slot.start }} — {{ nearest_slot.end }}</div>
+            <div class="nearest-date">
+                {{ nearest_slot.weekday }} {{ nearest_slot.date_jalali_full }}
+            </div>
+        </div>
+        <a href="{% url 'session_create' %}?consultant={{ selected_consultant.pk }}&date={{ nearest_slot.date_iso }}&time={{ nearest_slot.start }}"
+           class="nearest-btn">
+            <i class="bi bi-calendar-plus"></i>
+            رزرو این نوبت
+        </a>
+    </div>
+    {% else %}
+    <div class="no-nearest">
+        <i class="bi bi-calendar-x"></i>
+        در ۹۰ روز آینده نوبت خالی برای این مشاور وجود ندارد.
+    </div>
+    {% endif %}
+
+    <!-- ===== آمار ===== -->
+    <div class="stats-row">
+        <div class="stat-mini-box">
+            <i class="bi bi-calendar-check"></i>
+            <div>
+                <div class="value">{{ summary_stats.total_free|pnum }}</div>
+                <div class="label">نوبت آزاد (۳۰ روز)</div>
+            </div>
+        </div>
+        <div class="stat-mini-box orange">
+            <i class="bi bi-calendar-x"></i>
+            <div>
+                <div class="value">{{ summary_stats.total_booked|pnum }}</div>
+                <div class="label">نوبت رزرو‌شده</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== تقویم ۳۰ روز ===== -->
+    <div class="calendar-card">
+        <div class="calendar-title">
+            <i class="bi bi-calendar3"></i>
+            ۳۰ روز آینده — {{ selected_consultant.get_full_name }}
+        </div>
+
+        <div class="days-grid">
+            {% for day in days_summary %}
+                <div class="day-box {% if day.is_today %}today{% endif %}"
+                     data-status="{{ day.status }}"
+                     data-date="{{ day.date_iso }}"
+                     {% if day.status != "empty" and day.status != "full" %}onclick="openSlotsModal('{{ day.date_iso }}', '{{ selected_consultant.pk }}', '{{ day.status }}')"{% endif %}>
+                    <div class="day-weekday">
+                        {% if day.weekday == 0 %}ش
+                        {% elif day.weekday == 1 %}ی
+                        {% elif day.weekday == 2 %}د
+                        {% elif day.weekday == 3 %}س
+                        {% elif day.weekday == 4 %}چ
+                        {% elif day.weekday == 5 %}پ
+                        {% else %}ج
+                        {% endif %}
+                    </div>
+                    <div class="day-num">{{ day.day|pnum }}</div>
+                    <div class="day-free">
+                        {% if day.free > 0 %}
+                            {{ day.free|pnum }} آزاد
+                        {% elif day.status == "empty" %}
+                            تعطیل
+                        {% else %}
+                            پر
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+{% endif %}
+
+<!-- ===== مودال اسلات‌ها ===== -->
+<div class="confirm-overlay" id="slotsOverlay">
+    <div class="confirm-box" style="padding:0; max-width: 580px;">
+        <div class="slots-modal-header">
+            <div>
+                <div class="slots-modal-title" id="slotsTitle">—</div>
+                <div class="slots-modal-sub" id="slotsSub">—</div>
+            </div>
+            <button type="button" class="slots-modal-close" onclick="closeSlotsModal()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="slots-modal-body" id="slotsBody">
+            <div class="slot-empty">
+                <i class="bi bi-hourglass-split"></i>
+                در حال بارگذاری...
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var CSRF_TOKEN = '{{ csrf_token }}';
+var currentConsultantId = {{ selected_consultant.pk|default:"null" }};
+
+// ==================================================
+// باز کردن مودال اسلات‌ها
+// ==================================================
+function openSlotsModal(dateISO, consultantId, status) {
+    if (status === 'empty' || status === 'full') return;
+
+    currentConsultantId = consultantId;
+
+    var overlay = document.getElementById('slotsOverlay');
+    document.getElementById('slotsTitle').textContent = 'در حال بارگذاری...';
+    document.getElementById('slotsSub').textContent = '';
+    document.getElementById('slotsBody').innerHTML =
+        '<div class="slot-empty"><i class="bi bi-hourglass-split"></i>در حال بارگذاری...</div>';
+
+    overlay.style.display = 'flex';
+    requestAnimationFrame(function() { overlay.classList.add('show'); });
+
+    fetch('/accounts/slots/' + consultantId + '/day/?date=' + dateISO)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) {
+                document.getElementById('slotsTitle').textContent = 'خطا';
+                document.getElementById('slotsBody').innerHTML =
+                    '<div class="slot-empty"><i class="bi bi-x-circle"></i>' + data.error + '</div>';
+                return;
+            }
+
+            document.getElementById('slotsTitle').textContent = data.weekday + ' — ' + data.date_jalali;
+            document.getElementById('slotsSub').textContent =
+                data.free_count + ' نوبت آزاد از ' + data.slots.length;
+
+            // اگه تعطیلات رسمی
+            var html = '';
+            if (data.is_holiday) {
+                html += '<div class="holiday-banner"><i class="bi bi-flag-fill"></i>' +
+                        data.holiday_name + '</div>';
+            }
+
+            var freeSlots = data.slots.filter(function(s) { return s.is_free; });
+
+            if (freeSlots.length === 0) {
+                html += '<div class="slot-empty"><i class="bi bi-calendar-x"></i>' +
+                        'نوبت آزادی در این روز وجود ندارد.</div>';
+            } else {
+                html += '<div class="slots-grid">';
+                freeSlots.forEach(function(s) {
+                    html += '<div class="slot-item" onclick="bookSlot(\'' +
+                            data.date_iso + '\', \'' + s.start + '\')">' +
+                            '<div class="slot-time">' + s.start + '</div>' +
+                            '<div class="slot-duration">تا ' + s.end + '</div>' +
+                            '</div>';
+                });
+                html += '</div>';
+            }
+
+            document.getElementById('slotsBody').innerHTML = html;
+        })
+        .catch(function(err) {
+            console.error(err);
+            document.getElementById('slotsBody').innerHTML =
+                '<div class="slot-empty"><i class="bi bi-x-circle"></i>خطای شبکه</div>';
+        });
+}
+
+// ==================================================
+// بستن مودال
+// ==================================================
+function closeSlotsModal() {
+    var overlay = document.getElementById('slotsOverlay');
+    overlay.classList.remove('show');
+    setTimeout(function() { overlay.style.display = 'none'; }, 200);
+}
+
+// ==================================================
+// رزرو نوبت
+// ==================================================
+function bookSlot(dateISO, startTime) {
+    var url = '{% url "session_create" %}?consultant=' + currentConsultantId +
+              '&date=' + dateISO + '&time=' + startTime;
+    window.location.href = url;
+}
+
+// بستن با Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var overlay = document.getElementById('slotsOverlay');
+        if (overlay && overlay.classList.contains('show')) closeSlotsModal();
+    }
+});
+</script>
+{% endblock %}

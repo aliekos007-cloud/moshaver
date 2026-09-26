@@ -1,3 +1,5 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.shortcuts import render, redirect, get_object_or_404
@@ -6,6 +8,12 @@ from accounts.decorators import medical_view_required, medical_edit_required
 from audit.models import log_action
 from .models import Patient
 from .forms import PatientForm
+from .iran_locations import IRAN_LOCATIONS
+
+
+def _locations_context():
+    """داده‌های استان/شهر/منطقه برای JS."""
+    return {"locations_json": json.dumps(IRAN_LOCATIONS, ensure_ascii=False)}
 
 
 @login_required
@@ -33,7 +41,11 @@ def patient_create(request):
             return redirect("patient_detail", pk=p.pk)
     else:
         form = PatientForm()
-    return render(request, "patients/form.html", {"form": form, "title": "ثبت مراجع جدید"})
+    return render(request, "patients/form.html", {
+        "form": form,
+        "title": "ثبت مراجع جدید",
+        **_locations_context(),
+    })
 
 
 @medical_edit_required
@@ -47,7 +59,11 @@ def patient_edit(request, pk):
             return redirect("patient_detail", pk=p.pk)
     else:
         form = PatientForm(instance=p)
-    return render(request, "patients/form.html", {"form": form, "title": f"ویرایش {p.full_name}"})
+    return render(request, "patients/form.html", {
+        "form": form,
+        "title": f"ویرایش {p.full_name}",
+        **_locations_context(),
+    })
 
 
 @login_required
@@ -57,12 +73,10 @@ def patient_detail(request, pk):
 
     p = get_object_or_404(Patient, pk=pk)
 
-    # جلسات این مراجع
     sessions = Session.objects.filter(
         client=p,
     ).select_related("consultant", "room").order_by("-scheduled_start")
 
-    # آمار
     total_sessions = sessions.filter(status="completed").count()
 
     log_action(request, "view", p, description="مشاهده پرونده مراجع")

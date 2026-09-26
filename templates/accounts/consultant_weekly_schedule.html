@@ -1,0 +1,698 @@
+{% extends "base.html" %}
+
+{% block title %}الگوی هفتگی — {{ consultant.get_full_name }}{% endblock %}
+
+{% block header %}<i class="bi bi-calendar-week"></i> الگوی حضور هفتگی{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">
+    {{ consultant.get_full_name }}
+    {% if consultant.consultant_level %} — {{ consultant.consultant_level.name }}{% endif %}
+</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'consultant_month_schedule' consultant.pk %}" class="btn btn-primary">
+        <i class="bi bi-calendar3"></i> تقویم ماهانه
+    </a>
+    <a href="{% url 'consultant_exceptions' consultant.pk %}" class="btn btn-outline-warning">
+        <i class="bi bi-calendar-x"></i> مرخصی و استثناها
+    </a>
+    {% if is_self %}
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% else %}
+        <a href="{% url 'consultants_schedule_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-card {
+        background: #fff;
+        border-radius: var(--border-radius);
+        padding: 1rem 1.15rem;
+        box-shadow: var(--shadow-sm);
+        margin-bottom: .85rem;
+    }
+
+    .schedule-section-title {
+        font-size: .88rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        margin-bottom: .75rem;
+        padding-bottom: .5rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .schedule-section-title i { color: var(--primary); }
+
+    /* ===== ردیف روز ===== */
+    .day-row {
+        display: flex;
+        align-items: center;
+        gap: .55rem;
+        padding: .5rem .65rem;
+        border-radius: 10px;
+        margin-bottom: .4rem;
+        transition: all .15s;
+        background: #f8fafc;
+        border: 1.5px solid #f1f5f9;
+        flex-wrap: nowrap;
+    }
+    .day-row:hover {
+        background: #fff;
+        border-color: #e2e8f0;
+    }
+    .day-row.active {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border-color: #10b981;
+    }
+
+    .day-toggle {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 20px;
+        flex-shrink: 0;
+    }
+    .day-toggle input { opacity: 0; width: 0; height: 0; }
+    .day-toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: #cbd5e1;
+        transition: .25s;
+        border-radius: 20px;
+    }
+    .day-toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        right: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: .25s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .day-toggle input:checked + .day-toggle-slider { background-color: #10b981; }
+    .day-toggle input:checked + .day-toggle-slider:before { transform: translateX(-14px); }
+
+    /* ===== اطلاعات روز ===== */
+    .day-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 72px;
+        flex-shrink: 0;
+        line-height: 1.2;
+    }
+    .day-name {
+        font-weight: 700;
+        font-size: .82rem;
+        color: #0f172a;
+    }
+    .day-row.active .day-name { color: #065f46; }
+
+    .day-date {
+        font-size: .65rem;
+        color: #94a3b8;
+        font-family: 'Courier New', monospace;
+        margin-top: 1px;
+    }
+    .day-row.active .day-date { color: #10b981; }
+
+    .day-date.today {
+        color: #f59e0b;
+        font-weight: 700;
+    }
+    .day-date.today::before {
+        content: "● ";
+        color: #f59e0b;
+    }
+
+    /* ===== ساعت‌ها ===== */
+    .day-times {
+        display: flex;
+        align-items: center;
+        gap: .25rem;
+        flex-shrink: 0;
+    }
+    .day-row:not(.active) .day-times { opacity: .35; pointer-events: none; }
+
+    .time-input {
+        width: 60px;
+        border-radius: 6px;
+        border: 1.5px solid #e2e8f0;
+        padding: .2rem .35rem;
+        font-size: .78rem;
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+        text-align: center;
+        background: #fff;
+        transition: all .15s;
+        direction: ltr;
+    }
+    .time-input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+    .time-sep { font-size: .68rem; color: #94a3b8; }
+
+    /* ===== نوار ساعت‌های افقی ===== */
+    .hours-strip {
+        display: flex;
+        gap: 2px;
+        flex: 1;
+        justify-content: flex-start;
+        transition: opacity .2s;
+    }
+    .day-row:not(.active) .hours-strip { opacity: .35; pointer-events: none; }
+
+    .hour-btn {
+        width: 26px;
+        height: 26px;
+        border-radius: 5px;
+        border: 1.5px solid transparent;
+        padding: 0;
+        cursor: pointer;
+        transition: all .12s;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Courier New', monospace;
+        font-size: .68rem;
+        font-weight: 700;
+        background: #fff;
+        flex-shrink: 0;
+        position: relative;
+        line-height: 1;
+    }
+
+    .hour-btn[data-state="active"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        border-color: #059669;
+        box-shadow: 0 1px 2px rgba(16,185,129,.25);
+    }
+    .hour-btn[data-state="active"]:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(16,185,129,.4);
+    }
+
+    .hour-btn[data-state="blocked"] {
+        background: #fff;
+        color: #ef4444;
+        border-color: #fca5a5;
+        border-style: dashed;
+    }
+    .hour-btn[data-state="blocked"]:hover {
+        background: #fef2f2;
+        transform: translateY(-1px);
+    }
+
+    .hour-btn[data-state="disabled"] {
+        background: #f1f5f9;
+        color: #64748b;
+        border-color: #e2e8f0;
+    }
+    .hour-btn[data-state="disabled"]:hover {
+        background: #e2e8f0;
+        color: #475569;
+        border-color: #cbd5e1;
+        transform: translateY(-1px);
+    }
+
+    .day-status-pill {
+        font-size: .62rem;
+        padding: .12rem .45rem;
+        border-radius: 999px;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .day-status-pill.on { background: rgba(16,185,129,.15); color: #059669; }
+    .day-status-pill.off { background: rgba(100,116,139,.12); color: #64748b; }
+
+    /* ===== راهنما ===== */
+    .hours-legend {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: .72rem;
+        color: #64748b;
+        margin-top: .5rem;
+        padding-top: .5rem;
+        border-top: 1px dashed #f1f5f9;
+        flex-wrap: wrap;
+    }
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: .25rem;
+    }
+    .legend-dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+    }
+    .legend-dot.active { background: linear-gradient(135deg, #10b981, #059669); }
+    .legend-dot.blocked { background: #fff; border: 1.5px dashed #fca5a5; }
+    .legend-dot.disabled { background: #f1f5f9; border: 1.5px solid #e2e8f0; }
+
+    /* ===== تنظیمات اسلات ===== */
+    .slot-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: .6rem;
+    }
+    .slot-field {
+        background: #f8fafc;
+        border-radius: 9px;
+        padding: .55rem .7rem;
+        border-right: 3px solid #2563eb;
+    }
+    .slot-field label {
+        font-size: .72rem;
+        color: #64748b;
+        margin-bottom: .25rem;
+        display: block;
+        font-weight: 600;
+    }
+    .slot-field input {
+        width: 100%;
+        border-radius: 7px;
+        border: 1.5px solid #e2e8f0;
+        padding: .3rem .55rem;
+        font-size: .9rem;
+        font-weight: 700;
+        font-family: 'Courier New', monospace;
+        text-align: center;
+        background: #fff;
+        direction: ltr;
+    }
+    .slot-field input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        outline: none;
+    }
+    .slot-field small {
+        font-size: .65rem;
+        color: #94a3b8;
+        display: block;
+        margin-top: .15rem;
+        text-align: center;
+    }
+
+    /* ===== info note ===== */
+    .info-note {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-right: 4px solid #2563eb;
+        border-radius: 10px;
+        padding: .65rem .9rem;
+        font-size: .78rem;
+        color: #1e40af;
+        margin-bottom: .85rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        line-height: 1.7;
+    }
+    .info-note i { font-size: 1rem; flex-shrink: 0; }
+    .info-note a {
+        color: #1e40af;
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    .save-bar {
+        background: #fff;
+        border-radius: var(--border-radius);
+        padding: .75rem 1.15rem;
+        box-shadow: var(--shadow-sm);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+    .save-bar-info {
+        font-size: .78rem;
+        color: #64748b;
+    }
+
+    @media (max-width: 1200px) {
+        .hour-btn { width: 24px; height: 24px; font-size: .62rem; }
+    }
+
+    @media (max-width: 991px) {
+        .day-row { flex-wrap: wrap; }
+        .hours-strip {
+            order: 10;
+            flex-basis: 100%;
+            margin-top: .35rem;
+            padding-top: .35rem;
+            border-top: 1px dashed #e2e8f0;
+            justify-content: space-between;
+        }
+        .hour-btn { width: 26px; height: 26px; }
+    }
+
+    @media (max-width: 767px) {
+        .slot-grid { grid-template-columns: 1fr; }
+        .hour-btn { width: 22px; height: 22px; font-size: .6rem; }
+        .day-status-pill { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not is_self %}
+<div class="info-note">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>
+        شما در حال ویرایش <strong>الگوی حضور هفتگی</strong> <strong>{{ consultant.get_full_name }}</strong> هستید.
+        این الگو هر هفته تکرار می‌شود.
+        برای مرخصی یا تغییر یک روز خاص، از <a href="{% url 'consultant_month_schedule' consultant.pk %}">تقویم ماهانه</a> استفاده کنید.
+    </div>
+</div>
+{% else %}
+<div class="info-note">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>
+        <strong>الگوی حضور هفتگی شما</strong> — این الگو هر هفته به‌طور خودکار تکرار می‌شود.
+        برای مرخصی یا تغییر یک روز خاص، به <a href="{% url 'consultant_month_schedule' consultant.pk %}">تقویم ماهانه</a> بروید.
+        <strong>هر تغییر به منشی اطلاع داده می‌شود.</strong>
+    </div>
+</div>
+{% endif %}
+
+<form method="post" id="schedule-form">
+    {% csrf_token %}
+
+    <div class="schedule-card">
+        <div class="schedule-section-title">
+            <i class="bi bi-calendar-week-fill"></i>
+            روزها و ساعت‌های فعال
+        </div>
+
+        {% for d in days_data %}
+        <div class="day-row {% if d.is_active %}active{% endif %}"
+             data-weekday="{{ d.weekday }}"
+             data-active="{{ d.is_active|yesno:'true,false' }}">
+
+            <label class="day-toggle">
+                <input type="checkbox"
+                       name="day_{{ d.weekday }}_active"
+                       id="day_{{ d.weekday }}_active"
+                       {% if d.is_active %}checked{% endif %}
+                       onchange="toggleDay({{ d.weekday }})">
+                <span class="day-toggle-slider"></span>
+            </label>
+
+            <div class="day-info">
+                <span class="day-name">{{ d.name }}</span>
+                <span class="day-date {% if d.next_date.is_today %}today{% endif %}"
+                      title="{{ d.next_date.jalali_str }}">
+                    {% if d.next_date.is_today %}
+                        امروز
+                    {% else %}
+                        {{ d.next_date.jalali_str }}
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="day-times">
+                <input type="text"
+                       class="time-input time-24"
+                       name="day_{{ d.weekday }}_start"
+                       id="day_{{ d.weekday }}_start"
+                       value="{{ d.start }}"
+                       maxlength="5"
+                       oninput="onTimeChange({{ d.weekday }})">
+
+                <span class="time-sep">تا</span>
+
+                <input type="text"
+                       class="time-input time-24"
+                       name="day_{{ d.weekday }}_end"
+                       id="day_{{ d.weekday }}_end"
+                       value="{{ d.end }}"
+                       maxlength="5"
+                       oninput="onTimeChange({{ d.weekday }})">
+            </div>
+
+            <input type="hidden"
+                   name="day_{{ d.weekday }}_blocked"
+                   id="day_{{ d.weekday }}_blocked"
+                   value="{{ d.blocked_hours|safe }}">
+
+            <div class="hours-strip" id="hours_{{ d.weekday }}">
+                {% for h in d.hours %}
+                <button type="button"
+                        class="hour-btn"
+                        data-hour="{{ h.hour }}"
+                        data-state="{{ h.state }}"
+                        onclick="toggleHour({{ d.weekday }}, {{ h.hour }})"
+                        title="ساعت {{ h.hour }}">
+                    {{ h.hour }}
+                </button>
+                {% endfor %}
+            </div>
+
+            <span class="day-status-pill {% if d.is_active %}on{% else %}off{% endif %}"
+                  id="day_{{ d.weekday }}_status">
+                {% if d.is_active %}فعال{% else %}تعطیل{% endif %}
+            </span>
+        </div>
+        {% endfor %}
+
+        <div class="hours-legend">
+            <div class="legend-item">
+                <span class="legend-dot active"></span>
+                <span>فعال</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot blocked"></span>
+                <span>غیرفعال (کلیک = فعال)</span>
+            </div>
+            <div class="legend-item">
+                <span class="legend-dot disabled"></span>
+                <span>خارج از بازه (کلیک = گسترش بازه)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== تنظیمات اسلات ===== -->
+    <div class="schedule-card">
+        <div class="schedule-section-title">
+            <i class="bi bi-clock-history"></i>
+            تنظیمات اسلات‌بندی نوبت
+        </div>
+
+        <div class="slot-grid">
+            <div class="slot-field">
+                <label>طول هر نوبت (دقیقه)</label>
+                <input type="number"
+                       name="slot_minutes"
+                       value="{{ slot_settings.slot_minutes }}"
+                       min="5" max="240" step="5">
+                <small>مثلاً ۴۵ یا ۵۰</small>
+            </div>
+
+            <div class="slot-field">
+                <label>فاصله بین نوبت‌ها</label>
+                <input type="number"
+                       name="buffer_minutes"
+                       value="{{ slot_settings.buffer_minutes }}"
+                       min="0" max="60" step="5">
+                <small>استراحت مشاور</small>
+            </div>
+
+            <div class="slot-field">
+                <label>حداکثر نوبت روزانه</label>
+                <input type="number"
+                       name="max_daily_sessions"
+                       value="{{ slot_settings.max_daily_sessions }}"
+                       min="1" max="30">
+                <small>سقف روزانه</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="save-bar">
+        <div class="save-bar-info">
+            <i class="bi bi-info-circle"></i>
+            پس از ذخیره، این الگو برای همهٔ هفته‌ها اعمال می‌شود و در نوبت‌دهی هوشمند استفاده خواهد شد.
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle-fill"></i> ذخیره
+        </button>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==================================================
+// فعال/غیرفعال کردن روز
+// ==================================================
+function toggleDay(weekday) {
+    var row = document.querySelector('.day-row[data-weekday="' + weekday + '"]');
+    var checkbox = document.getElementById('day_' + weekday + '_active');
+    var status = document.getElementById('day_' + weekday + '_status');
+
+    if (checkbox.checked) {
+        row.classList.add('active');
+        row.dataset.active = 'true';
+        status.textContent = 'فعال';
+        status.classList.remove('off');
+        status.classList.add('on');
+        refreshDayHours(weekday);
+    } else {
+        row.classList.remove('active');
+        row.dataset.active = 'false';
+        status.textContent = 'تعطیل';
+        status.classList.remove('on');
+        status.classList.add('off');
+        refreshDayHours(weekday);
+    }
+}
+
+// ==================================================
+// تغییر ساعت → بروزرسانی نوار ساعت
+// ==================================================
+function onTimeChange(weekday) {
+    refreshDayHours(weekday);
+}
+
+function refreshDayHours(weekday) {
+    var row = document.querySelector('.day-row[data-weekday="' + weekday + '"]');
+    if (!row || row.dataset.active !== 'true') return;
+
+    var startStr = document.getElementById('day_' + weekday + '_start').value || '08:00';
+    var endStr = document.getElementById('day_' + weekday + '_end').value || '14:00';
+
+    var startH = parseInt(startStr.split(':')[0]) || 8;
+    var endParts = endStr.split(':');
+    var endH = parseInt(endParts[0]) || 14;
+    var endM = parseInt(endParts[1] || 0);
+    if (endM > 0) endH += 1;
+
+    var blockedInput = document.getElementById('day_' + weekday + '_blocked');
+    var blocked = [];
+    try { blocked = JSON.parse(blockedInput.value) || []; } catch(e) { blocked = []; }
+    blocked = blocked.map(Number);
+
+    var strip = document.getElementById('hours_' + weekday);
+    strip.querySelectorAll('.hour-btn').forEach(function(btn) {
+        var h = parseInt(btn.dataset.hour);
+        if (h >= startH && h < endH) {
+            if (blocked.indexOf(h) !== -1) {
+                btn.dataset.state = 'blocked';
+            } else {
+                btn.dataset.state = 'active';
+            }
+        } else {
+            btn.dataset.state = 'disabled';
+        }
+    });
+}
+
+// ==================================================
+// Toggle ساعت
+// ==================================================
+function toggleHour(weekday, hour) {
+    var row = document.querySelector('.day-row[data-weekday="' + weekday + '"]');
+    if (!row || row.dataset.active !== 'true') return;
+
+    var startInput = document.getElementById('day_' + weekday + '_start');
+    var endInput = document.getElementById('day_' + weekday + '_end');
+
+    var startH = parseInt((startInput.value || '08:00').split(':')[0]) || 8;
+    var endParts = (endInput.value || '14:00').split(':');
+    var endH = parseInt(endParts[0]) || 14;
+    var endM = parseInt(endParts[1] || 0);
+    if (endM > 0) endH += 1;
+
+    var blockedInput = document.getElementById('day_' + weekday + '_blocked');
+    var blocked = [];
+    try { blocked = JSON.parse(blockedInput.value) || []; } catch(e) { blocked = []; }
+    blocked = blocked.map(Number);
+
+    if (hour < startH) {
+        startInput.value = String(hour).padStart(2, '0') + ':00';
+        refreshDayHours(weekday);
+        return;
+    }
+    if (hour >= endH) {
+        endInput.value = String(hour + 1).padStart(2, '0') + ':00';
+        refreshDayHours(weekday);
+        return;
+    }
+
+    var idx = blocked.indexOf(hour);
+    if (idx !== -1) {
+        blocked.splice(idx, 1);
+    } else {
+        blocked.push(hour);
+    }
+
+    blocked.sort(function(a, b) { return a - b; });
+    blockedInput.value = JSON.stringify(blocked);
+    refreshDayHours(weekday);
+}
+
+// ==================================================
+// input زمان ۲۴ ساعته
+// ==================================================
+document.querySelectorAll('.time-24').forEach(function(input) {
+    input.addEventListener('input', function() {
+        var v = this.value
+            .replace(/[۰-۹]/g, function(d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+            .replace(/[^\d:]/g, '');
+
+        var parts = v.split(':');
+        if (parts.length > 2) v = parts[0] + ':' + parts.slice(1).join('');
+        if (parts[0] && parts[0].length === 2 && !v.includes(':') && v.length === 2) {
+            v = v + ':';
+        }
+        if (v.length > 5) v = v.substring(0, 5);
+        this.value = v;
+    });
+
+    input.addEventListener('blur', function() {
+        var v = this.value.trim();
+        if (!v) return;
+        if (/^\d{3,4}$/.test(v)) {
+            if (v.length === 3) v = '0' + v[0] + ':' + v.substring(1);
+            else v = v.substring(0, 2) + ':' + v.substring(2);
+        }
+        var m = v.match(/^(\d{1,2}):?(\d{1,2})?$/);
+        if (m) {
+            var h = parseInt(m[1] || 0);
+            var min = parseInt(m[2] || 0);
+            if (h > 23) h = 23;
+            if (min > 59) min = 59;
+            this.value = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+        }
+        var weekday = this.id.match(/day_(\d+)_/);
+        if (weekday) refreshDayHours(parseInt(weekday[1]));
+    });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    for (var w = 0; w < 7; w++) {
+        refreshDayHours(w);
+    }
+});
+</script>
+{% endblock %}

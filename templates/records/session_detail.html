@@ -6,61 +6,322 @@
 
 {% block header %}<i class="bi bi-calendar-check"></i> جلسه{% endblock %}
 {% block subtitle %}
-<div class="page-subtitle">{{ session.client.full_name }} — {{ session.scheduled_start|jalali_datetime }}</div>
+<div class="page-subtitle">{{ session.client.full_name }}</div>
 {% endblock %}
 
 {% block topbar_actions %}
-<a href="{% url 'session_list' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-right"></i> بازگشت
-</a>
+    {% if session.status == "scheduled" or session.status == "paused" %}
+        <a href="{% url 'session_edit' session.pk %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> ویرایش
+        </a>
+        <form method="post" action="{% url 'session_delete' session.pk %}" class="d-inline"
+              id="cancel-session-form">
+            {% csrf_token %}
+            <button type="button" class="btn btn-outline-danger" onclick="confirmCancelSession();">
+                <i class="bi bi-x-circle"></i> لغو جلسه
+            </button>
+        </form>
+    {% endif %}
+    <a href="{% url 'session_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right"></i> بازگشت
+    </a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== هدر زمان ===== */
+    .time-hero {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: #fff;
+        border-radius: 16px;
+        padding: 1.5rem 1.75rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 10px 30px rgba(37, 99, 235, 0.25);
+        position: relative;
+        overflow: hidden;
+    }
+    .time-hero::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    .time-hero[data-status="completed"] {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.25);
+    }
+    .time-hero[data-status="cancelled"],
+    .time-hero[data-status="no_show"] {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 10px 30px rgba(239, 68, 68, 0.25);
+    }
+    .time-hero[data-status="in_progress"],
+    .time-hero[data-status="paused"] {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
+    }
+
+    .time-hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .time-hero-label {
+        font-size: .78rem;
+        opacity: .85;
+        margin-bottom: .35rem;
+        letter-spacing: .5px;
+    }
+
+    .time-hero-time {
+        font-size: 2.4rem;
+        font-weight: 800;
+        line-height: 1;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 1px;
+    }
+
+    .time-hero-date {
+        font-size: .95rem;
+        opacity: .9;
+        margin-top: .35rem;
+    }
+
+    .time-hero-status {
+        position: relative;
+        z-index: 1;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: .5rem 1rem;
+        border-radius: 999px;
+        font-size: .85rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+    }
+
+    /* ===== اطلاعات ===== */
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .info-item {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: .85rem 1rem;
+        border-right: 3px solid #e2e8f0;
+    }
+
+    .info-item.primary { border-right-color: #2563eb; }
+    .info-item.success { border-right-color: #10b981; }
+    .info-item.warning { border-right-color: #f59e0b; }
+
+    .info-item-label {
+        font-size: .72rem;
+        color: #64748b;
+        margin-bottom: .25rem;
+        display: flex;
+        align-items: center;
+        gap: .35rem;
+    }
+    .info-item-label i { color: #94a3b8; }
+
+    .info-item-value {
+        font-weight: 700;
+        color: #0f172a;
+        font-size: .95rem;
+    }
+
+    /* ===== بازه‌های زمان ===== */
+    .timeline-item {
+        display: flex;
+        justify-content: space-between;
+        padding: .65rem 0;
+        border-bottom: 1px dashed #e2e8f0;
+        font-size: .88rem;
+    }
+    .timeline-item:last-child { border-bottom: none; }
+    .timeline-label {
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+    }
+    .timeline-label i { color: #94a3b8; font-size: .85rem; }
+    .timeline-value {
+        font-weight: 600;
+        color: #0f172a;
+        font-family: 'Courier New', monospace;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="row">
+
+<!-- ===== هدر زمان ===== -->
+<div class="time-hero" data-status="{{ session.status }}">
+    <div class="time-hero-content">
+        <div class="time-hero-label">زمان شروع</div>
+        <div class="time-hero-time">{{ session.scheduled_start|jalali_time }}</div>
+        <div class="time-hero-date">{{ session.scheduled_start|jalali_full }}</div>
+    </div>
+    <div class="time-hero-status">
+        {{ session.get_status_display }}
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- ===== ستون اصلی ===== -->
     <div class="col-lg-8">
-        <div class="card mb-3">
+        <div class="card">
             <div class="card-body">
-                <h6 class="mb-3"><i class="bi bi-info-circle"></i> اطلاعات جلسه</h6>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <div class="text-muted small">مراجع</div>
-                        <div class="fw-bold">{{ session.client.full_name }}</div>
+                <h6 class="mb-3"><i class="bi bi-info-circle text-primary"></i> اطلاعات جلسه</h6>
+
+                <div class="info-grid">
+                    <div class="info-item primary">
+                        <div class="info-item-label">
+                            <i class="bi bi-person-circle"></i> مراجع
+                        </div>
+                        <div class="info-item-value">{{ session.client.full_name }}</div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="text-muted small">مشاور</div>
-                        <div class="fw-bold">{{ session.consultant.get_full_name }}</div>
+
+                    <div class="info-item primary">
+                        <div class="info-item-label">
+                            <i class="bi bi-person-badge"></i> مشاور
+                        </div>
+                        <div class="info-item-value">{{ session.consultant.get_full_name }}</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small">زمان</div>
-                        <div>{{ session.scheduled_start|jalali_datetime }}</div>
+
+                    <div class="info-item">
+                        <div class="info-item-label">
+                            <i class="bi bi-door-open"></i> اتاق
+                        </div>
+                        <div class="info-item-value">
+                            {% if session.room %}{{ session.room.name }}{% else %}—{% endif %}
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small">اتاق</div>
-                        <div>{{ session.room.name|default:"—" }}</div>
+
+                    <div class="info-item">
+                        <div class="info-item-label">
+                            <i class="bi bi-tag"></i> نوع جلسه
+                        </div>
+                        <div class="info-item-value">{{ session.get_session_type_display }}</div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small">نوع</div>
-                        <div>{{ session.get_session_type_display }}</div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-muted small">وضعیت</div>
-                        <div>{{ session.get_status_display }}</div>
-                    </div>
+
                     {% if session.actual_duration_minutes %}
-                    <div class="col-md-4">
-                        <div class="text-muted small">مدت واقعی</div>
-                        <div>{{ session.actual_duration_minutes|pnum }} دقیقه</div>
+                    <div class="info-item warning">
+                        <div class="info-item-label">
+                            <i class="bi bi-clock-history"></i> مدت واقعی
+                        </div>
+                        <div class="info-item-value">{{ session.actual_duration_minutes|pnum }} دقیقه</div>
                     </div>
                     {% endif %}
+
                     {% if session.final_fee %}
-                    <div class="col-md-4">
-                        <div class="text-muted small">مبلغ</div>
-                        <div class="fw-bold">{{ session.final_fee|pnum }} تومان</div>
+                    <div class="info-item success">
+                        <div class="info-item-label">
+                            <i class="bi bi-cash-coin"></i> مبلغ نهایی
+                        </div>
+                        <div class="info-item-value">{{ session.final_fee|pnum }} تومان</div>
                     </div>
                     {% endif %}
                 </div>
+
+                {% if session.secretary_note %}
+                <div class="mt-3 p-3" style="background: #fef3c7; border-radius: 10px; border-right: 3px solid #f59e0b;">
+                    <div class="small text-muted mb-1">
+                        <i class="bi bi-sticky"></i> یادداشت
+                    </div>
+                    <div style="color: #92400e;">{{ session.secretary_note }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== ستون کناری: بازه‌های زمانی ===== -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-clock-history text-primary"></i> بازه‌های زمانی</h6>
+
+                <div class="timeline-item">
+                    <span class="timeline-label">
+                        <i class="bi bi-calendar-event"></i> شروع برنامه
+                    </span>
+                    <span class="timeline-value">
+                        {{ session.scheduled_start|jalali_time }}
+                    </span>
+                </div>
+
+                <div class="timeline-item">
+                    <span class="timeline-label">
+                        <i class="bi bi-calendar-check"></i> پایان برنامه
+                    </span>
+                    <span class="timeline-value">
+                        {{ session.scheduled_end|jalali_time }}
+                    </span>
+                </div>
+
+                {% if session.started_at %}
+                <div class="timeline-item">
+                    <span class="timeline-label">
+                        <i class="bi bi-play-circle"></i> شروع واقعی
+                    </span>
+                    <span class="timeline-value" style="color: #059669;">
+                        {{ session.started_at|jalali_time }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if session.ended_at %}
+                <div class="timeline-item">
+                    <span class="timeline-label">
+                        <i class="bi bi-stop-circle"></i> پایان واقعی
+                    </span>
+                    <span class="timeline-value" style="color: #dc2626;">
+                        {{ session.ended_at|jalali_time }}
+                    </span>
+                </div>
+                {% endif %}
+
+                {% if session.total_paused_seconds %}
+                <div class="timeline-item">
+                    <span class="timeline-label">
+                        <i class="bi bi-pause-circle"></i> مجموع وقفه
+                    </span>
+                    <span class="timeline-value">
+                        {{ session.total_paused_seconds|pnum }} ثانیه
+                    </span>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function confirmCancelSession() {
+    var ok = await showConfirm({
+        type: 'danger',
+        title: 'لغو جلسه',
+        message: 'آیا از لغو این جلسه مطمئن هستید؟ این عمل قابل بازگشت نیست.',
+        okText: 'بله، لغو کن',
+        cancelText: 'انصراف'
+    });
+    if (ok) {
+        document.getElementById('cancel-session-form').submit();
+    }
+}
+</script>
 {% endblock %}

@@ -70,13 +70,14 @@ class Patient(models.Model):
     country = models.CharField("کشور", max_length=50, default="ایران")
     province = models.CharField("استان", max_length=50, blank=True)
     city = models.CharField("شهر", max_length=50, blank=True)
+    district = models.CharField("منطقه / محله", max_length=50, blank=True)
     street = models.CharField("خیابان", max_length=100, blank=True)
     alley = models.CharField("کوچه", max_length=100, blank=True)
     plaque = models.CharField("پلاک", max_length=20, blank=True)
     postal_code = models.CharField("کد پستی", max_length=10, blank=True)
     address_note = models.TextField("توضیحات آدرس", blank=True)
 
-    # ===== جدید: ویژهٔ مرکز مشاوره =====
+    # ===== ویژهٔ مرکز مشاوره =====
     referral_source = models.CharField(
         "منبع آشنایی", max_length=20,
         choices=REFERRAL_SOURCES, blank=True,
@@ -99,7 +100,7 @@ class Patient(models.Model):
         verbose_name="مشاور اصلی",
     )
 
-    # ===== جدید: مالی =====
+    # ===== مالی =====
     outstanding_balance = models.DecimalField(
         "مانده بدهی (تومان)", max_digits=12, decimal_places=0, default=0,
         help_text="مجموع بدهی انباشته",
@@ -156,14 +157,11 @@ class Patient(models.Model):
 
 
 # ==================================================
-# شرح حال محرمانه — فقط مشاور و مدیر
+# شرح حال محرمانه
 # ==================================================
 
 class ClientNarrative(models.Model):
-    """
-    شرح حال بالینی — فقط مشاور مربوطه و مدیر ارشد.
-    منشی هیچ دسترسی‌ای ندارد.
-    """
+    """شرح حال بالینی — فقط مشاور و مدیر ارشد."""
     SUICIDE_RISK = [
         ("none", "بدون خطر"),
         ("low", "کم"),
@@ -176,23 +174,19 @@ class ClientNarrative(models.Model):
         related_name="narrative", verbose_name="مراجع",
     )
 
-    # ===== شکایت اصلی =====
     chief_complaint = models.TextField("شکایت اصلی")
     history_of_present_illness = models.TextField("تاریخچهٔ مشکل فعلی")
 
-    # ===== تاریخچه =====
     past_psychiatric_history = models.TextField("سابقهٔ روان‌پزشکی", blank=True)
     family_history = models.TextField("سابقهٔ خانوادگی", blank=True)
     medical_history = models.TextField("سابقهٔ پزشکی", blank=True)
     medications = models.TextField("داروهای مصرفی", blank=True)
     substance_use = models.TextField("مصرف مواد", blank=True)
 
-    # ===== وضعیت اجتماعی =====
     social_history = models.TextField("وضعیت اجتماعی", blank=True)
     education_occupation = models.TextField("تحصیلات و شغل", blank=True)
     marital_family_status = models.TextField("وضعیت تأهل و خانواده", blank=True)
 
-    # ===== ارزیابی خطر =====
     suicide_risk = models.CharField(
         "خطر خودکشی", max_length=20,
         choices=SUICIDE_RISK, default="none",
@@ -203,11 +197,9 @@ class ClientNarrative(models.Model):
     )
     risk_notes = models.TextField("یادداشت خطر", blank=True)
 
-    # ===== تشخیص =====
     provisional_diagnosis = models.TextField("تشخیص اولیه", blank=True)
     dsm_codes = models.JSONField("کدهای DSM-5", default=list, blank=True)
 
-    # ===== متادیتا =====
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
         related_name="narratives_created", verbose_name="ثبت‌کننده",

@@ -254,7 +254,8 @@
                     <i class="bi bi-award-fill"></i> سطح مشاور
                 </div>
                 <div class="consultant-section-desc">
-                    تعرفه و زمان استاندارد جلسات این مشاور بر اساس این سطح محاسبه می‌شود.
+                اگر این کاربر جلسه برگزار می‌کند، سطح مشاور را انتخاب کنید.
+                مدیرانی که مشاوره هم می‌دهند باید سطح انتخاب کنند.
                 </div>
 
                 <div class="row g-3">
@@ -327,13 +328,14 @@
 
     function toggleConsultantSection() {
         if (!roleSelect || !consultantSection) return;
-        if (roleSelect.value === 'consultant') {
+        // برای مشاور و مدیر نمایش داده می‌شود
+        if (roleSelect.value === 'consultant' || roleSelect.value === 'manager') {
             consultantSection.classList.add('show');
         } else {
             consultantSection.classList.remove('show');
         }
     }
-
+    
     if (roleSelect) {
         roleSelect.addEventListener('change', toggleConsultantSection);
         toggleConsultantSection();

@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+
+{% block title %}اعلان‌ها{% endblock %}
+
+{% block header %}<i class="bi bi-bell"></i> اعلان‌ها{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body p-0">
+        {% if notifications %}
+            {% for n in notifications %}
+            <a href="{{ n.link|default:'#' }}" class="notif-item {% if not n.is_read %}unread{% endif %}">
+                <div class="notif-icon type-{{ n.type }}">
+                    <i class="bi bi-bell"></i>
+                </div>
+                <div class="notif-content">
+                    <div class="notif-title">{{ n.title }}</div>
+                    {% if n.message %}
+                        <div class="notif-message">{{ n.message }}</div>
+                    {% endif %}
+                    <div class="notif-time">{{ n.created_at|jalali_datetime }}</div>
+                </div>
+                {% if not n.is_read %}
+                    <span class="badge bg-primary">جدید</span>
+                {% endif %}
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-bell-slash"></i>
+                هیچ اعلانی ندارید.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .notif-item {
+        display: flex;
+        gap: .75rem;
+        padding: .85rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        text-decoration: none;
+        color: inherit;
+        transition: background .15s;
+        align-items: flex-start;
+    }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-item:hover { background: #f8fafc; color: inherit; }
+    .notif-item.unread { background: #eff6ff; }
+    .notif-item.unread:hover { background: #dbeafe; }
+    .notif-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(37,99,235,.1);
+        color: #2563eb;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    .notif-content { flex: 1; min-width: 0; }
+    .notif-title { font-weight: 700; color: #0f172a; font-size: .88rem; }
+    .notif-message { font-size: .78rem; color: #64748b; margin-top: .15rem; line-height: 1.5; }
+    .notif-time { font-size: .68rem; color: #94a3b8; margin-top: .25rem; }
+</style>
+{% endblock %}

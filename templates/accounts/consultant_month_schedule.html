@@ -1,0 +1,823 @@
+{% extends "base.html" %}
+{% load jalali_tags %}
+{% load persian_numbers %}
+
+{% block title %}تقویم ماهانه — {{ consultant.get_full_name }}{% endblock %}
+
+{% block header %}<i class="bi bi-calendar3"></i> تقویم ماهانه{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">{{ consultant.get_full_name }}</div>
+{% endblock %}
+
+{% block topbar_actions %}
+    <a href="{% url 'consultant_weekly_schedule' consultant.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-calendar-week"></i> الگوی هفتگی
+    </a>
+    <a href="{% url 'consultant_exceptions' consultant.pk %}" class="btn btn-outline-warning">
+        <i class="bi bi-calendar-x"></i> استثناها
+    </a>
+    {% if is_self %}
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% else %}
+        <a href="{% url 'consultants_schedule_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-right"></i> بازگشت
+        </a>
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .month-info {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-right: 4px solid #2563eb;
+        border-radius: 9px;
+        padding: .5rem .75rem;
+        font-size: .74rem;
+        color: #1e40af;
+        margin-bottom: .6rem;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        line-height: 1.6;
+    }
+    .month-info i { font-size: .95rem; flex-shrink: 0; }
+
+    .month-nav {
+        background: #fff;
+        border-radius: 12px;
+        padding: .5rem .8rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: .6rem;
+    }
+    .month-nav-title {
+        font-size: .95rem;
+        font-weight: 700;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+    }
+    .month-nav-title .month-name { color: #2563eb; }
+    .month-nav-title .month-year { color: #64748b; font-size: .8rem; }
+    .month-nav-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: #f1f5f9;
+        color: #475569;
+        text-decoration: none;
+        transition: all .15s;
+        border: none;
+        cursor: pointer;
+        font-size: .9rem;
+    }
+    .month-nav-btn:hover { background: #e2e8f0; color: #0f172a; }
+    .month-nav-btn.today {
+        width: auto;
+        padding: 0 .65rem;
+        font-size: .74rem;
+        font-weight: 600;
+        gap: .25rem;
+    }
+
+    .calendar-wrap {
+        background: #fff;
+        border-radius: 14px;
+        padding: .6rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 3px;
+    }
+
+    .cal-head {
+        text-align: center;
+        font-size: .7rem;
+        font-weight: 700;
+        color: #64748b;
+        padding: .3rem 0;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    .cal-cell {
+        background: #fff;
+        border-radius: 9px;
+        padding: .35rem .4rem;
+        min-height: 72px;
+        border: 1.5px solid #f1f5f9;
+        cursor: pointer;
+        transition: all .15s;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: .15rem;
+        overflow: hidden;
+    }
+
+    .cal-cell:hover {
+        border-color: #2563eb;
+        box-shadow: 0 4px 12px rgba(37,99,235,0.1);
+        transform: translateY(-1px);
+    }
+
+    .cal-cell.empty {
+        background: transparent;
+        border: none;
+        cursor: default;
+        pointer-events: none;
+    }
+    .cal-cell.empty:hover { transform: none; border: none; box-shadow: none; }
+
+    .cal-cell.past {
+        background: #f8fafc;
+        opacity: .55;
+        cursor: not-allowed;
+    }
+    .cal-cell.past:hover {
+        transform: none;
+        border-color: #f1f5f9;
+        box-shadow: none;
+    }
+
+    .cal-cell.today {
+        border-color: #f59e0b;
+        border-width: 2px;
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    }
+
+    .cal-cell.off { background: #f8fafc; }
+
+    .cal-cell.override {
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border-color: #fb923c;
+    }
+
+    .cal-cell.holiday {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border-color: #fca5a5;
+    }
+
+    .cal-cell.holiday.past { opacity: .5; }
+
+    .cal-cell-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .25rem;
+    }
+
+    .cal-day-num {
+        font-size: .82rem;
+        font-weight: 700;
+        color: #0f172a;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        gap: .25rem;
+    }
+    .cal-cell.past .cal-day-num { color: #94a3b8; }
+    .cal-cell.today .cal-day-num { color: #b45309; }
+    .cal-cell.holiday .cal-day-num { color: #b91c1c; }
+
+    .today-badge {
+        font-size: .52rem;
+        background: #f59e0b;
+        color: #fff;
+        padding: .05rem .3rem;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    .override-badge {
+        font-size: .52rem;
+        background: #fb923c;
+        color: #fff;
+        padding: .05rem .3rem;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    /* ===== کلید toggle کوچک ===== */
+    .day-toggle-mini {
+        position: relative;
+        display: inline-flex;
+        width: 24px;
+        height: 14px;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+    .day-toggle-mini input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    .day-toggle-mini .slider {
+        position: absolute;
+        inset: 0;
+        background: #cbd5e1;
+        border-radius: 14px;
+        transition: .25s;
+    }
+    .day-toggle-mini .slider::before {
+        content: "";
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        right: 3px;
+        bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: .25s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    }
+    .day-toggle-mini input:checked + .slider { background: #10b981; }
+    .day-toggle-mini input:checked + .slider::before {
+        transform: translateX(-10px);
+    }
+    .cal-cell.past .day-toggle-mini { pointer-events: none; opacity: .3; }
+
+    .cal-time {
+        font-size: .62rem;
+        color: #475569;
+        font-family: 'Courier New', monospace;
+        font-weight: 600;
+        line-height: 1.15;
+    }
+    .cal-cell.past .cal-time { color: #94a3b8; }
+
+    .cal-off-label {
+        font-size: .62rem;
+        color: #94a3b8;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: .2rem;
+    }
+
+    .cal-holiday-name {
+        font-size: .58rem;
+        color: #b91c1c;
+        font-weight: 700;
+        margin-top: auto;
+        line-height: 1.1;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .cal-legend {
+        display: flex;
+        gap: .65rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: .55rem;
+        padding-top: .5rem;
+        border-top: 1px dashed #f1f5f9;
+        font-size: .68rem;
+        color: #64748b;
+    }
+    .cal-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: .25rem;
+    }
+    .legend-box {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+        border: 1.5px solid #e2e8f0;
+    }
+    .legend-box.normal { background: #fff; }
+    .legend-box.override { background: #ffedd5; border-color: #fb923c; }
+    .legend-box.today { background: #fef3c7; border-color: #f59e0b; border-width: 2px; }
+    .legend-box.off { background: #f1f5f9; }
+    .legend-box.holiday { background: #fee2e2; border-color: #fca5a5; }
+    .legend-box.past { background: #f8fafc; opacity: .55; }
+
+    @media (max-width: 991px) {
+        .cal-cell { min-height: 68px; padding: .3rem .35rem; }
+        .cal-day-num { font-size: .75rem; }
+        .cal-time { font-size: .58rem; }
+    }
+    @media (max-width: 767px) {
+        .cal-cell { min-height: 60px; padding: .25rem; }
+        .cal-time, .cal-holiday-name { display: none; }
+        .today-badge, .override-badge { display: none; }
+        .day-toggle-mini { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ===== CSRF token مخفی ===== -->
+<form style="display:none;">{% csrf_token %}</form>
+
+<div class="month-info">
+    <i class="bi bi-info-circle-fill"></i>
+    <div>
+        روزها به‌طور خودکار از <strong>الگوی هفتگی</strong> پر می‌شوند.
+        با کلید کنار هر روز، می‌توانید روز را تعطیل/فعال کنید.
+        برای تغییر ساعت یا ثبت مرخصی، روی خود روز کلیک کنید.
+    </div>
+</div>
+
+<div class="month-nav">
+    <a href="?y={{ prev_month.0 }}&m={{ prev_month.1 }}" class="month-nav-btn" title="ماه قبل">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+
+    <div class="month-nav-title">
+        <i class="bi bi-calendar3 text-primary"></i>
+        <span class="month-name">{{ month_data.month_name }}</span>
+        <span class="month-year">{{ month_data.year|pnum }}</span>
+    </div>
+
+    <div class="d-flex gap-1 align-items-center">
+        <a href="{% url 'consultant_month_schedule' consultant.pk %}" class="month-nav-btn today">
+            <i class="bi bi-calendar-event"></i> امروز
+        </a>
+        <a href="?y={{ next_month.0 }}&m={{ next_month.1 }}" class="month-nav-btn" title="ماه بعد">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+    </div>
+</div>
+
+<div class="calendar-wrap">
+    <div class="calendar-grid">
+        <div class="cal-head">شنبه</div>
+        <div class="cal-head">یک‌شنبه</div>
+        <div class="cal-head">دوشنبه</div>
+        <div class="cal-head">سه‌شنبه</div>
+        <div class="cal-head">چهارشنبه</div>
+        <div class="cal-head">پنج‌شنبه</div>
+        <div class="cal-head">جمعه</div>
+
+        {% for i in "123456"|make_list %}
+            {% if forloop.counter0 < month_data.first_weekday %}
+                <div class="cal-cell empty"></div>
+            {% endif %}
+        {% endfor %}
+
+        {% for day in month_data.days %}
+            <div class="cal-cell
+                        {% if day.is_past %}past{% endif %}
+                        {% if day.is_today %}today{% endif %}
+                        {% if day.source == 'override' %}override{% endif %}
+                        {% if not day.is_active and day.source != 'override' %}off{% endif %}
+                        {% if day.is_holiday %}holiday{% endif %}"
+                 data-date="{{ day.date_iso }}"
+                 data-active="{{ day.is_active|yesno:'true,false' }}"
+                 data-start="{{ day.start|default:'' }}"
+                 data-end="{{ day.end|default:'' }}"
+                 data-blocked="{{ day.blocked_hours|join:',' }}"
+                 data-note="{{ day.note }}"
+                 data-source="{{ day.source }}"
+                 data-is-holiday="{{ day.is_holiday|yesno:'true,false' }}"
+                 data-holiday-name="{{ day.holiday_name|default:'' }}"
+                 {% if not day.is_past %}onclick="openDayEditor(this)"{% endif %}>
+
+                <div class="cal-cell-top">
+                    <div class="cal-day-num">
+                        {{ day.day|pnum }}
+                        {% if day.is_today %}
+                            <span class="today-badge">امروز</span>
+                        {% elif day.source == "override" and not day.is_past %}
+                            <span class="override-badge">تغییر</span>
+                        {% endif %}
+                    </div>
+
+                    {% if not day.is_past %}
+                    <label class="day-toggle-mini" onclick="event.stopPropagation();">
+                        <input type="checkbox"
+                               {% if day.is_active %}checked{% endif %}
+                               onchange="toggleDayActive(this, '{{ day.date_iso }}')">
+                        <span class="slider"></span>
+                    </label>
+                    {% endif %}
+                </div>
+
+                {% if day.is_active and day.start and day.end %}
+                    <div class="cal-time">{{ day.start }} - {{ day.end }}</div>
+                {% else %}
+                    <div class="cal-off-label">
+                        <i class="bi bi-slash-circle"></i> تعطیل
+                    </div>
+                {% endif %}
+
+                {% if day.is_holiday %}
+                    <div class="cal-holiday-name" title="{{ day.holiday_name }}">
+                        <i class="bi bi-flag-fill"></i> {{ day.holiday_name }}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="cal-legend">
+        <div class="cal-legend-item">
+            <span class="legend-box normal"></span> عادی
+        </div>
+        <div class="cal-legend-item">
+            <span class="legend-box override"></span> تغییر
+        </div>
+        <div class="cal-legend-item">
+            <span class="legend-box today"></span> امروز
+        </div>
+        <div class="cal-legend-item">
+            <span class="legend-box off"></span> تعطیل
+        </div>
+        <div class="cal-legend-item">
+            <span class="legend-box holiday"></span> تعطیل رسمی
+        </div>
+        <div class="cal-legend-item">
+            <span class="legend-box past"></span> گذشته
+        </div>
+    </div>
+</div>
+
+<div class="confirm-overlay" id="dayEditorOverlay">
+    <div class="day-editor-box">
+        <div class="day-editor-header">
+            <div>
+                <div class="day-editor-title" id="dayEditorTitle">—</div>
+                <div class="day-editor-sub" id="dayEditorSub">—</div>
+            </div>
+            <button type="button" class="day-editor-close" onclick="closeDayEditor()">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="day-editor-body">
+            <div class="day-editor-status">
+                <div class="day-editor-status-text">
+                    <strong id="dayEditorStatusTitle">وضعیت این روز</strong>
+                    <small id="dayEditorStatusDesc">—</small>
+                </div>
+                <label class="status-toggle">
+                    <input type="checkbox" id="dayEditorActive">
+                    <span class="status-toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="day-editor-times" id="dayEditorTimes">
+                <div class="day-editor-time-field">
+                    <label>از ساعت</label>
+                    <input type="text" class="time-input time-24" id="dayEditorStart" maxlength="5" placeholder="08:00">
+                </div>
+                <div class="day-editor-time-field">
+                    <label>تا ساعت</label>
+                    <input type="text" class="time-input time-24" id="dayEditorEnd" maxlength="5" placeholder="14:00">
+                </div>
+            </div>
+
+            <div class="day-editor-hours-label">ساعت‌های غیرفعال (کلیک کنید):</div>
+            <div class="day-editor-hours" id="dayEditorHours"></div>
+
+            <div class="day-editor-note">
+                <label>یادداشت (اختیاری)</label>
+                <input type="text" id="dayEditorNote" placeholder="مثلاً: جلسهٔ اداری" maxlength="200">
+            </div>
+        </div>
+
+        <div class="day-editor-actions">
+            <button type="button" class="btn btn-outline-warning" id="dayEditorReset" onclick="resetDay()">
+                <i class="bi bi-arrow-counterclockwise"></i> بازگشت به الگو
+            </button>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" onclick="closeDayEditor()">
+                    انصراف
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveDay()">
+                    <i class="bi bi-check-circle-fill"></i> ذخیره
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+var CSRF_TOKEN = '{{ csrf_token }}';
+
+let currentDayDate = null;
+let currentDayBlocked = [];
+let currentDayCell = null;
+
+function openDayEditor(cell) {
+    if (cell.classList.contains('past')) return;
+
+    currentDayCell = cell;
+    currentDayDate = cell.dataset.date;
+
+    var isActive = cell.dataset.active === 'true';
+    var start = cell.dataset.start || '08:00';
+    var end = cell.dataset.end || '14:00';
+    var blocked = (cell.dataset.blocked || '').split(',').filter(Boolean).map(Number);
+    var note = cell.dataset.note || '';
+    var source = cell.dataset.source || 'weekly';
+    var isHoliday = cell.dataset.isHoliday === 'true';
+    var holidayName = cell.dataset.holidayName || '';
+
+    var dayNum = cell.querySelector('.cal-day-num').childNodes[0].textContent.trim();
+    var weekdayIndex = Array.from(cell.parentNode.children).indexOf(cell) % 7;
+    var weekdays = ['شنبه', 'یک‌شنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنج‌شنبه', 'جمعه'];
+
+    document.getElementById('dayEditorTitle').textContent = weekdays[weekdayIndex] + ' ' + dayNum;
+
+    var subText = 'منبع: ' + (source === 'override' ? 'تغییر یافته' : 'الگوی هفتگی');
+    if (isHoliday) subText += ' — 🎉 ' + holidayName;
+    document.getElementById('dayEditorSub').textContent = subText;
+
+    document.getElementById('dayEditorActive').checked = isActive;
+    document.getElementById('dayEditorStart').value = start;
+    document.getElementById('dayEditorEnd').value = end;
+    document.getElementById('dayEditorNote').value = note;
+
+    currentDayBlocked = blocked.slice();
+
+    updateStatusUI();
+    renderHours();
+
+    var overlay = document.getElementById('dayEditorOverlay');
+    overlay.style.display = 'flex';
+    requestAnimationFrame(function() { overlay.classList.add('show'); });
+
+    document.getElementById('dayEditorReset').style.display = source === 'override' ? 'inline-flex' : 'none';
+}
+
+function closeDayEditor() {
+    var overlay = document.getElementById('dayEditorOverlay');
+    overlay.classList.remove('show');
+    setTimeout(function() { overlay.style.display = 'none'; }, 200);
+}
+
+function updateStatusUI() {
+    var active = document.getElementById('dayEditorActive').checked;
+    var timesEl = document.getElementById('dayEditorTimes');
+    var statusDesc = document.getElementById('dayEditorStatusDesc');
+
+    if (active) {
+        timesEl.style.opacity = '1';
+        timesEl.style.pointerEvents = 'auto';
+        statusDesc.textContent = 'این روز فعال است';
+    } else {
+        timesEl.style.opacity = '.4';
+        timesEl.style.pointerEvents = 'none';
+        statusDesc.textContent = 'این روز تعطیل است';
+    }
+}
+
+document.getElementById('dayEditorActive').addEventListener('change', updateStatusUI);
+
+function renderHours() {
+    var startStr = document.getElementById('dayEditorStart').value || '08:00';
+    var endStr = document.getElementById('dayEditorEnd').value || '14:00';
+
+    var startH = parseInt(startStr.split(':')[0]) || 8;
+    var endParts = endStr.split(':');
+    var endH = parseInt(endParts[0]) || 14;
+    var endM = parseInt(endParts[1] || 0);
+    if (endM > 0) endH += 1;
+
+    var hoursEl = document.getElementById('dayEditorHours');
+    hoursEl.innerHTML = '';
+
+    for (var h = 8; h < 22; h++) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'hour-btn';
+        btn.dataset.hour = h;
+        btn.textContent = h;
+
+        if (h >= startH && h < endH) {
+            btn.dataset.state = currentDayBlocked.indexOf(h) !== -1 ? 'blocked' : 'active';
+        } else {
+            btn.dataset.state = 'disabled';
+        }
+
+        btn.addEventListener('click', function() {
+            toggleDayHour(parseInt(this.dataset.hour));
+        });
+
+        hoursEl.appendChild(btn);
+    }
+}
+
+function toggleDayHour(hour) {
+    if (!document.getElementById('dayEditorActive').checked) return;
+
+    var startStr = document.getElementById('dayEditorStart').value || '08:00';
+    var endStr = document.getElementById('dayEditorEnd').value || '14:00';
+
+    var startH = parseInt(startStr.split(':')[0]) || 8;
+    var endParts = endStr.split(':');
+    var endH = parseInt(endParts[0]) || 14;
+    var endM = parseInt(endParts[1] || 0);
+    if (endM > 0) endH += 1;
+
+    if (hour < startH) {
+        document.getElementById('dayEditorStart').value = String(hour).padStart(2, '0') + ':00';
+        renderHours();
+        return;
+    }
+    if (hour >= endH) {
+        document.getElementById('dayEditorEnd').value = String(hour + 1).padStart(2, '0') + ':00';
+        renderHours();
+        return;
+    }
+
+    var idx = currentDayBlocked.indexOf(hour);
+    if (idx !== -1) {
+        currentDayBlocked.splice(idx, 1);
+    } else {
+        currentDayBlocked.push(hour);
+    }
+    currentDayBlocked.sort(function(a, b) { return a - b; });
+    renderHours();
+}
+
+async function saveDay() {
+    if (!currentDayDate) return;
+
+    var isActive = document.getElementById('dayEditorActive').checked;
+    var start = document.getElementById('dayEditorStart').value.trim();
+    var end = document.getElementById('dayEditorEnd').value.trim();
+    var note = document.getElementById('dayEditorNote').value.trim();
+
+    if (isActive && (!start || !end)) {
+        showToast('ساعت شروع و پایان الزامی است.', 'error');
+        return;
+    }
+
+    var payload = {
+        date: currentDayDate,
+        is_active: isActive,
+        start: start,
+        end: end,
+        blocked_hours: currentDayBlocked,
+        note: note,
+    };
+
+    try {
+        var res = await fetch('{% url "api_save_day_schedule" consultant.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrf(),
+            },
+            body: JSON.stringify(payload),
+        });
+        var data = await res.json();
+
+        if (data.ok) {
+            showToast(data.message || 'ذخیره شد.', 'success');
+            setTimeout(function() { location.reload(); }, 600);
+        } else {
+            showToast(data.error || 'خطا در ذخیره', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('خطای شبکه', 'error');
+    }
+}
+
+async function resetDay() {
+    if (!currentDayDate) return;
+
+    var ok = await showConfirm({
+        type: 'warning',
+        title: 'بازگشت به الگو',
+        message: 'این روز به الگوی هفتگی برمی‌گردد. تغییرات این روز پاک می‌شود.',
+        okText: 'بله، بازگردان',
+        cancelText: 'انصراف'
+    });
+
+    if (!ok) return;
+
+    try {
+        var res = await fetch('{% url "api_reset_day_schedule" consultant.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrf(),
+            },
+            body: JSON.stringify({ date: currentDayDate }),
+        });
+        var data = await res.json();
+
+        if (data.ok) {
+            showToast(data.message || 'بازگشت انجام شد.', 'success');
+            setTimeout(function() { location.reload(); }, 600);
+        } else {
+            showToast(data.error || 'خطا', 'error');
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('خطای شبکه', 'error');
+    }
+}
+
+async function toggleDayActive(checkbox, dateISO) {
+    var isNowActive = checkbox.checked;
+    var cell = checkbox.closest('.cal-cell');
+
+    // ساعت‌ها: اگه روز الان غیرفعاله، پیش‌فرض 08:00-14:00
+    var start = cell.dataset.start || '08:00';
+    var end = cell.dataset.end || '14:00';
+    var blocked = (cell.dataset.blocked || '').split(',').filter(Boolean).map(Number);
+
+    var payload = {
+        date: dateISO,
+        is_active: isNowActive,
+        start: isNowActive ? start : '',
+        end: isNowActive ? end : '',
+        blocked_hours: isNowActive ? blocked : [],
+        note: isNowActive ? '' : 'تعطیل توسط کاربر',
+    };
+
+    try {
+        var res = await fetch('{% url "api_save_day_schedule" consultant.pk %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: JSON.stringify(payload),
+        });
+        var data = await res.json();
+
+        if (data.ok) {
+            showToast(
+                isNowActive ? 'روز فعال شد' : 'روز تعطیل شد',
+                isNowActive ? 'success' : 'warning'
+            );
+            setTimeout(function() { location.reload(); }, 500);
+        } else {
+            showToast(data.error || 'خطا', 'error');
+            checkbox.checked = !isNowActive;
+        }
+    } catch (err) {
+        console.error(err);
+        showToast('خطای شبکه', 'error');
+        checkbox.checked = !isNowActive;
+    }
+}
+
+document.querySelectorAll('.time-24').forEach(function(input) {
+    input.addEventListener('input', function() {
+        var v = this.value
+            .replace(/[۰-۹]/g, function(d) { return "۰۱۲۳۴۵۶۷۸۹".indexOf(d); })
+            .replace(/[^\d:]/g, '');
+
+        var parts = v.split(':');
+        if (parts.length > 2) v = parts[0] + ':' + parts.slice(1).join('');
+        if (parts[0] && parts[0].length === 2 && !v.includes(':') && v.length === 2) {
+            v = v + ':';
+        }
+        if (v.length > 5) v = v.substring(0, 5);
+        this.value = v;
+    });
+
+    input.addEventListener('blur', function() {
+        var v = this.value.trim();
+        if (!v) return;
+        if (/^\d{3,4}$/.test(v)) {
+            if (v.length === 3) v = '0' + v[0] + ':' + v.substring(1);
+            else v = v.substring(0, 2) + ':' + v.substring(2);
+        }
+        var m = v.match(/^(\d{1,2}):?(\d{1,2})?$/);
+        if (m) {
+            var h = parseInt(m[1] || 0);
+            var min = parseInt(m[2] || 0);
+            if (h > 23) h = 23;
+            if (min > 59) min = 59;
+            this.value = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+        }
+        renderHours();
+    });
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var overlay = document.getElementById('dayEditorOverlay');
+        if (overlay && overlay.classList.contains('show')) closeDayEditor();
+    }
+});
+</script>
+{% endblock %}

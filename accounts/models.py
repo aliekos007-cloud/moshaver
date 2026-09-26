@@ -33,7 +33,7 @@ class User(AbstractUser):
     role = models.CharField("نقش", max_length=20, choices=Role.choices, default=Role.SECRETARY)
     phone = models.CharField("تلفن همراه", max_length=15, blank=True)
 
-    # ===== جدید: اطلاعات مشاور =====
+    # ===== اطلاعات مشاور =====
     consultant_level = models.ForeignKey(
         "ConsultantLevel",
         null=True, blank=True,
@@ -74,10 +74,7 @@ class User(AbstractUser):
 # ==================================================
 
 class ConsultantLevel(models.Model):
-    """
-    سطح مشاور — تعیین‌کنندهٔ تعرفه
-    مثل: کارشناس، کارشناسی ارشد، دکتری، فوق‌تخصص
-    """
+    """سطح مشاور — تعیین‌کنندهٔ تعرفه"""
     name = models.CharField("عنوان سطح", max_length=50)
     code = models.SlugField("کد", unique=True)
     order = models.PositiveIntegerField("ترتیب نمایش", default=0)
@@ -167,6 +164,14 @@ class ConsultantWeeklySchedule(models.Model):
     end_time = models.TimeField("ساعت پایان")
     is_active = models.BooleanField("فعال", default=True)
 
+    # ===== ساعت‌های غیرفعال (ناهار، نماز، جلسهٔ اداری) =====
+    blocked_hours = models.JSONField(
+        "ساعت‌های غیرفعال",
+        default=list,
+        blank=True,
+        help_text="لیست ساعت‌های غیرفعال — مثلاً [12, 13]",
+    )
+
     class Meta:
         verbose_name = "برنامهٔ هفتگی"
         verbose_name_plural = "برنامه‌های هفتگی"
@@ -187,7 +192,7 @@ class ConsultantScheduleOverride(models.Model):
     سه حالت:
       1) تعطیلی کامل: is_off=True
       2) ساعت ویژه: custom_start/custom_end
-      3) تعطیلی یک بازه از تاریخ
+      3) ساعت‌های غیرفعال خاص: blocked_hours
     """
     consultant = models.ForeignKey(
         User, on_delete=models.CASCADE,
@@ -202,6 +207,13 @@ class ConsultantScheduleOverride(models.Model):
     )
     custom_start = models.TimeField("ساعت شروع ویژه", null=True, blank=True)
     custom_end = models.TimeField("ساعت پایان ویژه", null=True, blank=True)
+
+    # ===== ساعت‌های غیرفعال خاص (ناهار، نماز، ...) =====
+    blocked_hours = models.JSONField(
+        "ساعت‌های غیرفعال",
+        default=list, blank=True,
+        help_text="لیست ساعت‌های غیرفعال — مثلاً [12, 13]",
+    )
 
     apply_to_all_weekdays = models.BooleanField(
         "اعمال روی همهٔ روزهای هفته", default=True,

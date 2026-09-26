@@ -107,3 +107,50 @@ def reports_export_csv(request):
 
     log_action(request, "export", description="خروجی CSV گزارش‌ها")
     return response
+
+# ==================================================
+# گزارش مشاوران
+# ==================================================
+
+def consultant_reports(request):
+    """گزارش عملکرد مشاوران."""
+    from datetime import timedelta
+    from django.utils import timezone
+    from accounts.models import User
+    from .consultant_reports import get_all_consultants_summary, get_consultant_report
+
+    # فیلتر بازه
+    days = int(request.GET.get("days", 30))
+    to_date = timezone.localdate()
+    from_date = to_date - timedelta(days=days)
+
+    # فیلتر مشاور
+    consultant_id = request.GET.get("consultant")
+
+    if consultant_id:
+        consultant = User.objects.get(pk=consultant_id)
+        report = get_consultant_report(consultant, from_date, to_date)
+        reports = [report]
+    else:
+        reports = get_all_consultants_summary(from_date, to_date)
+
+    # لیست مشاوران برای dropdown
+    consultants = User.objects.filter(
+        is_active=True, consultant_level__isnull=False,
+    ).order_by("last_name", "first_name")
+
+    # آمار کلی
+    total_sessions = sum(r["completed_sessions"] for r in reports)
+    total_minutes = sum(r["total_minutes"] for r in reports)
+    total_revenue = sum(r["total_revenue"] for r in reports)
+
+    return render(request, "reports/consultant_reports.html", {
+        "reports": reports,
+        "consultants": consultants,
+        "days": days,
+        "from_date": from_date,
+        "to_date": to_date,
+        "total_sessions": total_sessions,
+        "total_minutes": total_minutes,
+        "total_revenue": total_revenue,
+    })

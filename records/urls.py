@@ -6,6 +6,8 @@ urlpatterns = [
     path("sessions/", views.session_list, name="session_list"),
     path("sessions/create/", views.session_create, name="session_create"),
     path("sessions/<int:pk>/", views.session_detail, name="session_detail"),
+    path("sessions/<int:pk>/edit/", views.session_edit, name="session_edit"),
+    path("sessions/<int:pk>/delete/", views.session_delete, name="session_delete"),
 
     # ===== API جلسه =====
     path("session/<int:pk>/start/", views.session_start, name="session_start"),

@@ -1,0 +1,471 @@
+/* ==================================================
+   مشاور — استایل مودال‌ها
+   ================================================== */
+
+/* ===== Confirm Modal ===== */
+.confirm-overlay {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+.confirm-overlay.show { opacity: 1; }
+
+.confirm-box {
+    background: #fff;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 400px;
+    padding: 1.4rem;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform .25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    text-align: center;
+}
+.confirm-overlay.show .confirm-box { transform: scale(1); }
+
+.confirm-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: .75rem;
+}
+.confirm-icon.default { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
+.confirm-icon.danger  { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.confirm-icon.warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+.confirm-icon.success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+
+.confirm-title { font-size: 1rem; font-weight: 700; color: #0f172a; margin-bottom: .35rem; }
+.confirm-message { color: #64748b; font-size: .85rem; line-height: 1.6; margin-bottom: 1.1rem; }
+.confirm-actions { display: flex; gap: .55rem; justify-content: center; }
+.confirm-actions .btn { flex: 1; justify-content: center; padding: .5rem .85rem; font-size: .85rem; border-radius: 10px; }
+
+/* ===== Payment Modal ===== */
+.payment-box {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform .25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    overflow: hidden;
+}
+.confirm-overlay.show .payment-box { transform: scale(1); }
+
+.payment-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    padding: .75rem 1rem;
+    color: #fff;
+    text-align: center;
+    position: relative;
+}
+.payment-header::before {
+    content: "";
+    position: absolute;
+    top: -50%; right: -20%;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+    border-radius: 50%;
+}
+.payment-header-icon {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .95rem;
+    margin-bottom: .25rem;
+    position: relative;
+    z-index: 1;
+}
+.payment-header-title {
+    font-size: .9rem;
+    font-weight: 700;
+    margin-bottom: .1rem;
+    position: relative;
+    z-index: 1;
+}
+.payment-header-sub {
+    font-size: .72rem;
+    opacity: .9;
+    position: relative;
+    z-index: 1;
+}
+
+.payment-body { padding: .8rem .9rem; }
+
+.payment-amount-display {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: .45rem .7rem;
+    margin-bottom: .65rem;
+    border-right: 3px solid #2563eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.payment-amount-label {
+    font-size: .72rem;
+    color: #64748b;
+    margin-bottom: 0;
+}
+.payment-amount-value {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: 'Courier New', monospace;
+    letter-spacing: .5px;
+}
+.payment-amount-value small {
+    font-size: .68rem;
+    color: #64748b;
+    font-weight: 400;
+}
+
+.payment-field-label {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: .25rem;
+    display: block;
+}
+
+.payment-input {
+    width: 100%;
+    border-radius: 10px;
+    border: 1.5px solid #e2e8f0;
+    padding: .4rem .7rem;
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    letter-spacing: 1px;
+    transition: all .2s;
+    background: #fff;
+    direction: ltr;
+}
+.payment-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.quick-amounts {
+    display: flex;
+    gap: .35rem;
+    margin-top: .35rem;
+}
+.quick-amount-btn {
+    flex: 1;
+    padding: .28rem .45rem;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1.5px solid transparent;
+    color: #475569;
+    font-size: .7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+}
+.quick-amount-btn:hover { background: #e2e8f0; }
+.quick-amount-btn.active {
+    background: linear-gradient(135deg, #2563eb, #1e40af);
+    color: #fff;
+    border-color: #2563eb;
+}
+
+.payment-methods {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .35rem;
+    margin-top: .25rem;
+}
+.payment-method-btn {
+    padding: .4rem .3rem;
+    border-radius: 8px;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    color: #475569;
+    font-size: .7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+}
+.payment-method-btn i { font-size: .9rem; }
+.payment-method-btn:hover {
+    border-color: #cbd5e1;
+    background: #f8fafc;
+}
+.payment-method-btn.active {
+    border-color: var(--primary);
+    background: rgba(37, 99, 235, 0.06);
+    color: var(--primary);
+}
+
+.payment-remaining {
+    background: #fef3c7;
+    border-right: 3px solid #f59e0b;
+    border-radius: 8px;
+    padding: .35rem .6rem;
+    margin-top: .35rem;
+    font-size: .7rem;
+    color: #92400e;
+    font-weight: 600;
+    display: none;
+}
+.payment-remaining.show { display: block; }
+
+.payment-note {
+    width: 100%;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    padding: .35rem .6rem;
+    font-size: .75rem;
+    margin-top: .35rem;
+    background: #fff;
+}
+.payment-note:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.payment-actions {
+    display: flex;
+    gap: .45rem;
+    padding: .6rem .9rem .8rem;
+    border-top: 1px solid #f1f5f9;
+}
+.payment-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: .45rem .75rem;
+    font-size: .82rem;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.btn-payment-submit {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+.btn-payment-submit:hover {
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+/* ==================================================
+   Day Editor Modal (تقویم ماهانه)
+   ================================================== */
+
+.day-editor-box {
+    background: #fff;
+    border-radius: 18px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9);
+    transition: transform .25s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    overflow: hidden;
+}
+.confirm-overlay.show .day-editor-box { transform: scale(1); }
+
+.day-editor-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    padding: 1rem 1.25rem;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+.day-editor-title {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: .15rem;
+}
+.day-editor-sub {
+    font-size: .72rem;
+    opacity: .9;
+}
+.day-editor-close {
+    background: transparent;
+    border: none;
+    color: #fff;
+    opacity: .7;
+    cursor: pointer;
+    font-size: 1.1rem;
+    padding: .25rem;
+    transition: opacity .15s;
+}
+.day-editor-close:hover { opacity: 1; }
+
+.day-editor-body {
+    padding: 1rem 1.25rem;
+}
+
+.day-editor-status {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f0fdf4;
+    border-right: 4px solid #10b981;
+    border-radius: 10px;
+    padding: .65rem .85rem;
+    margin-bottom: 1rem;
+    transition: all .2s;
+}
+.day-editor-status-text strong {
+    display: block;
+    font-size: .85rem;
+    color: #065f46;
+}
+.day-editor-status-text small {
+    font-size: .72rem;
+    color: #10b981;
+}
+
+.day-editor-times {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .65rem;
+    margin-bottom: 1rem;
+    transition: opacity .2s;
+}
+.day-editor-time-field label {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #475569;
+    display: block;
+    margin-bottom: .25rem;
+}
+
+.day-editor-hours-label {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: .35rem;
+}
+.day-editor-hours {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+.day-editor-hours .hour-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1.5px solid transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: all .12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', monospace;
+    font-size: .75rem;
+    font-weight: 700;
+    background: #fff;
+    color: #0f172a;
+}
+.day-editor-hours .hour-btn[data-state="active"] {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #fff;
+    border-color: #059669;
+}
+.day-editor-hours .hour-btn[data-state="blocked"] {
+    background: #fff;
+    color: #ef4444;
+    border-color: #fca5a5;
+    border-style: dashed;
+}
+.day-editor-hours .hour-btn[data-state="disabled"] {
+    background: #f1f5f9;
+    color: #64748b;
+    border-color: #e2e8f0;
+}
+.day-editor-hours .hour-btn[data-state="disabled"]:hover {
+    background: #e2e8f0;
+}
+.day-editor-hours .hour-btn[data-state="active"]:hover,
+.day-editor-hours .hour-btn[data-state="blocked"]:hover {
+    transform: translateY(-1px);
+}
+
+.day-editor-note label {
+    font-size: .74rem;
+    font-weight: 600;
+    color: #475569;
+    display: block;
+    margin-bottom: .25rem;
+}
+.day-editor-note input {
+    width: 100%;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    padding: .45rem .7rem;
+    font-size: .82rem;
+    background: #fff;
+}
+.day-editor-note input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    outline: none;
+}
+
+.day-editor-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .85rem 1.25rem 1rem;
+    border-top: 1px solid #f1f5f9;
+    background: #f8fafc;
+    flex-wrap: wrap;
+}
+
+/* ===== Status Toggle ===== */
+.status-toggle {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+    flex-shrink: 0;
+}
+.status-toggle input { opacity: 0; width: 0; height: 0; }
+.status-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #cbd5e1;
+    transition: .25s;
+    border-radius: 26px;
+}
+.status-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    right: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .25s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+.status-toggle input:checked + .status-toggle-slider { background-color: #10b981; }
+.status-toggle input:checked + .status-toggle-slider:before {
+    transform: translateX(-20px);
+}

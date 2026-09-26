@@ -17,7 +17,7 @@ urlpatterns = [
     path("audit/", include("audit.urls")),
     path("reports/", include("reports.urls")),
     path("licensing/", include("licensing.urls")),
-    path("appointments/", include("appointments.urls")),
+    path("notifications/", include("notifications.urls")),   # ← این خط
     path("", dashboard, name="dashboard"),
 ]
 

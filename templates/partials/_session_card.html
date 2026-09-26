@@ -2,7 +2,7 @@
 {% load persian_numbers %}
 
 <div class="session-header">
-    <div>
+    <div style="flex: 1; min-width: 0;">
         <div class="consultant-line">
             <i class="bi bi-person-circle" style="color:{{ s.level_snapshot.color|default:'#2563eb' }};"></i>
             {{ s.consultant.get_full_name }}
@@ -18,8 +18,15 @@
             — {{ s.get_session_type_display }}
         </div>
     </div>
+
     {% if s.room %}
-    <span class="room-badge"><i class="bi bi-door-open"></i> {{ s.room.name }}</span>
+    <span class="room-badge">
+        <i class="bi bi-door-open-fill"></i> {{ s.room.name }}
+    </span>
+    {% else %}
+    <span class="room-badge" style="background: #fef3c7; color: #92400e;">
+        <i class="bi bi-exclamation-triangle-fill"></i> بدون اتاق
+    </span>
     {% endif %}
 </div>
 

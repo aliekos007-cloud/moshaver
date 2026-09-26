@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 {% load jalali_tags %}
-{% block title %}مدیریت کاربران — طبیب{% endblock %}
-{% block header %}<i class="bi bi-person-badge-fill"></i> مدیریت کاربران{% endblock %}
-{% block subtitle %}<div class="page-subtitle">کاربران سامانه و سطح دسترسی آن‌ها</div>{% endblock %}
+
+{% block title %}مشاوران و کاربران{% endblock %}
+{% block header %}<i class="bi bi-people-fill"></i> مشاوران و کاربران{% endblock %}
+{% block subtitle %}
+<div class="page-subtitle">کاربران سامانه و سطح دسترسی آن‌ها</div>
+{% endblock %}
 
 {% block topbar_actions %}
     <a href="{% url 'user_create' %}" class="btn btn-primary">
@@ -19,6 +22,7 @@
             <th>نام</th>
             <th>کد ملی</th>
             <th>نقش</th>
+            <th>سطح</th>
             <th>تلفن</th>
             <th>وضعیت</th>
             <th>آخرین ورود</th>
@@ -44,13 +48,22 @@
                 <td data-label="کد ملی">{{ u.national_code }}</td>
                 <td data-label="نقش">
                     {% if u.role == "manager" %}
-                        <span class="badge bg-primary">مدیر مطب</span>
-                    {% elif u.role == "physician" %}
-                        <span class="badge bg-success">طبیب</span>
+                        <span class="badge bg-primary">مدیر مرکز</span>
+                    {% elif u.role == "consultant" %}
+                        <span class="badge bg-success">مشاور</span>
                     {% elif u.role == "secretary" %}
                         <span class="badge bg-warning text-dark">منشی</span>
                     {% else %}
                         <span class="badge bg-light text-dark">{{ u.get_role_display }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="سطح">
+                    {% if u.consultant_level %}
+                        <span class="badge" style="background: {{ u.consultant_level.color }}; color: #fff;">
+                            {{ u.consultant_level.name }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted small">—</span>
                     {% endif %}
                 </td>
                 <td data-label="تلفن">{{ u.phone|default:"—" }}</td>
@@ -70,6 +83,11 @@
                 </td>
                 <td>
                     <div class="d-flex gap-1">
+                        {% if u.consultant_level %}
+                        <a href="{% url 'consultant_weekly_schedule' u.pk %}" class="btn btn-sm btn-outline-success" title="برنامه هفتگی">
+                            <i class="bi bi-calendar-week"></i>
+                        </a>
+                        {% endif %}
                         <a href="{% url 'user_edit' u.pk %}" class="btn btn-sm btn-outline-primary" title="ویرایش">
                             <i class="bi bi-pencil"></i>
                         </a>
@@ -95,7 +113,7 @@
             </tr>
         {% empty %}
             <tr>
-                <td colspan="7">
+                <td colspan="8">
                     <div class="empty-state">
                         <i class="bi bi-people"></i>
                         هنوز کاربری ثبت نشده است.

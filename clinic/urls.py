@@ -2,6 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # API
+    path("api/consultant-room/<int:consultant_id>/", views.api_consultant_room, name="api_consultant_room"),
+    
     # تنظیمات
     path("settings/", views.clinic_settings, name="clinic_settings"),
 
@@ -19,4 +22,10 @@ urlpatterns = [
     path("presence/<int:pk>/change-room/", views.presence_change_room, name="presence_change_room"),
     path("presence/<int:pk>/checkout/", views.presence_checkout, name="presence_checkout"),
     path("presence/<int:pk>/toggle-break/", views.presence_toggle_break, name="presence_toggle_break"),
+    
+    # API
+    path("api/consultant-room/<int:consultant_id>/", views.api_consultant_room, name="api_consultant_room"),
+    path("api/slots/<int:consultant_id>/", views.api_consultant_slots, name="api_consultant_slots"),
+    path("api/nearest/<int:consultant_id>/", views.api_nearest_slot, name="api_nearest_slot"),
+    path("api/summary/<int:consultant_id>/", views.api_days_summary, name="api_days_summary"),
 ]

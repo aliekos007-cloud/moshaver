@@ -1,14 +1,17 @@
 {% extends "base.html" %}
-{% block title %}{{ title }} — طبیب{% endblock %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
 {% block header %}<i class="bi bi-person-vcard"></i> {{ title }}{% endblock %}
 
+{% block topbar_actions %}
+<a href="{% url 'patient_list' %}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-right"></i> بازگشت
+</a>
+{% endblock %}
+
 {% block extra_css %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
 <style>
-    .datepicker-plot-area {
-        font-family: Vazirmatn, tahoma, sans-serif !important;
-        z-index: 9999 !important;
-    }
     .required-star { color: #ef4444; font-weight: bold; margin-right: 2px; }
 </style>
 {% endblock %}
@@ -24,6 +27,7 @@
     </div>
     {% endif %}
 
+    <!-- ===== مشخصات هویتی ===== -->
     <div class="card mb-3">
         <div class="card-body">
             <h6 class="text-primary mb-3"><i class="bi bi-person-badge"></i> مشخصات هویتی</h6>
@@ -85,21 +89,11 @@
                     <label class="form-label">{{ form.education.label }}</label>
                     {{ form.education }}
                 </div>
-
-                <div class="col-md-4">
-                    <div class="form-check mt-4">
-                        {{ form.is_foreign }}
-                        <label class="form-check-label" for="{{ form.is_foreign.id_for_label }}">{{ form.is_foreign.label }}</label>
-                    </div>
-                </div>
-                <div class="col-md-8">
-                    <label class="form-label">{{ form.foreign_id.label }}</label>
-                    {{ form.foreign_id }}
-                </div>
             </div>
         </div>
     </div>
 
+    <!-- ===== اطلاعات تماس ===== -->
     <div class="card mb-3">
         <div class="card-body">
             <h6 class="text-primary mb-3"><i class="bi bi-telephone"></i> اطلاعات تماس</h6>
@@ -130,14 +124,11 @@
         </div>
     </div>
 
+    <!-- ===== آدرس ===== -->
     <div class="card mb-3">
         <div class="card-body">
             <h6 class="text-primary mb-3"><i class="bi bi-geo-alt"></i> آدرس</h6>
             <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">{{ form.country.label }}</label>
-                    {{ form.country }}
-                </div>
                 <div class="col-md-4">
                     <label class="form-label">{{ form.province.label }}</label>
                     {{ form.province }}
@@ -146,6 +137,12 @@
                     <label class="form-label">{{ form.city.label }}</label>
                     {{ form.city }}
                 </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.district.label }}</label>
+                    {{ form.district }}
+                    <div class="mt-1">{{ form.district_manual }}</div>
+                </div>
+
                 <div class="col-md-6">
                     <label class="form-label">{{ form.street.label }}</label>
                     {{ form.street }}
@@ -158,6 +155,7 @@
                     <label class="form-label">{{ form.plaque.label }}</label>
                     {{ form.plaque }}
                 </div>
+
                 <div class="col-md-4">
                     <label class="form-label">{{ form.postal_code.label }}</label>
                     {{ form.postal_code }}
@@ -183,38 +181,124 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script>
-$(document).ready(function() {
-    var hiddenField = $("#id_birth_date_gregorian");
-    var displayField = $("#birth_date_display");
+(function() {
+    // ==================================================
+    // داده‌های استان/شهر (از iran_locations.py که توسط ویو پاس داده می‌شود)
+    // ==================================================
+    var LOCATIONS = {{ locations_json|safe }};
 
-    displayField.persianDatepicker({
-        format: 'YYYY/MM/DD',
-        altField: '#id_birth_date_gregorian',
-        altFormat: 'YYYY-MM-DD',
-        autoClose: true,
-        initialValue: false,
-        observer: true,
-        persianDigit: true,
-        toolbox: { calendarSwitch: { enabled: false } },
-        navigator: { scroll: { enabled: false } }
-    });
+    var provinceSelect = document.getElementById('id_province');
+    var citySelect = document.getElementById('id_city');
+    var districtSelect = document.getElementById('id_district');
+    var districtManualInput = document.getElementById('id_district_manual');
 
-    var gregorianValue = hiddenField.val();
-    if (gregorianValue) {
-        try {
-            var gDate = new Date(gregorianValue);
-            if (!isNaN(gDate.getTime())) {
-                var pDate = new persianDate(gDate);
-                displayField.val(pDate.format('YYYY/MM/DD'));
-            }
-        } catch (e) {
-            console.error("خطا در تبدیل تاریخ:", e);
+    // ==================================================
+    // تغییر استان → پر کردن شهر
+    // ==================================================
+    function onProvinceChange() {
+        var province = provinceSelect.value;
+        var cities = (LOCATIONS[province] && LOCATIONS[province].cities) || [];
+
+        citySelect.innerHTML = '<option value="">— انتخاب شهر —</option>';
+        cities.sort().forEach(function(city) {
+            var opt = document.createElement('option');
+            opt.value = city;
+            opt.textContent = city;
+            citySelect.appendChild(opt);
+        });
+
+        // ریست منطقه
+        districtSelect.innerHTML = '<option value="">— ابتدا شهر را انتخاب کنید —</option>';
+        districtManualInput.style.display = 'none';
+        districtManualInput.value = '';
+    }
+
+    // ==================================================
+    // تغییر شهر → پر کردن منطقه
+    // ==================================================
+    function onCityChange() {
+        var province = provinceSelect.value;
+        var city = citySelect.value;
+        var districts = ((LOCATIONS[province] || {}).cities || {})[city] || [];
+
+        districtSelect.innerHTML = '<option value="">— انتخاب منطقه —</option>';
+        districts.forEach(function(d) {
+            var opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            districtSelect.appendChild(opt);
+        });
+        
+        // همیشه گزینه «سایر» را اضافه کن
+        var otherOpt = document.createElement('option');
+        otherOpt.value = '__other__';
+        otherOpt.textContent = '✏️ سایر (دستی وارد کنید)';
+        districtSelect.appendChild(otherOpt);
+
+        // مخفی کردن فیلد دستی در ابتدا
+        districtManualInput.style.display = 'none';
+        districtManualInput.value = '';
+
+        if (!districts.length) {
+            districtSelect.innerHTML = '<option value="">— بدون منطقه —</option>';
+            var otherOpt2 = document.createElement('option');
+            otherOpt2.value = '__other__';
+            otherOpt2.textContent = '✏️ سایر (دستی وارد کنید)';
+            districtSelect.appendChild(otherOpt2);
         }
     }
-});
+
+    // ==================================================
+    // تغییر منطقه → نمایش فیلد دستی در صورت نیاز
+    // ==================================================
+    function onDistrictChange() {
+        if (districtSelect.value === '__other__') {
+            districtManualInput.style.display = 'block';
+            districtManualInput.focus();
+        } else {
+            districtManualInput.style.display = 'none';
+            districtManualInput.value = '';
+        }
+    }
+
+    if (provinceSelect) provinceSelect.addEventListener('change', onProvinceChange);
+    if (citySelect) citySelect.addEventListener('change', onCityChange);
+    if (districtSelect) districtSelect.addEventListener('change', onDistrictChange);
+
+    // ==================================================
+    // تقویم شمسی تولد
+    // ==================================================
+    if (window.jQuery && window.persianDate) {
+        var $ = window.jQuery;
+        var hiddenField = $("#id_birth_date_gregorian");
+        var displayField = $("#birth_date_display");
+
+        displayField.persianDatepicker({
+            format: 'YYYY/MM/DD',
+            altField: '#id_birth_date_gregorian',
+            altFormat: 'YYYY-MM-DD',
+            autoClose: true,
+            initialValue: false,
+            observer: true,
+            persianDigit: true,
+            toolbox: { calendarSwitch: { enabled: false } },
+            navigator: { scroll: { enabled: false } }
+        });
+
+        var gregorianValue = hiddenField.val();
+        if (gregorianValue) {
+            try {
+                var gDate = new Date(gregorianValue);
+                if (!isNaN(gDate.getTime())) {
+                    var pDate = new persianDate(gDate);
+                    displayField.val(pDate.format('YYYY/MM/DD'));
+                }
+            } catch (e) {
+                console.error("خطا در تبدیل تاریخ:", e);
+            }
+        }
+    }
+})();
 </script>
 {% endblock %}
