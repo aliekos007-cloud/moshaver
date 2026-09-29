@@ -18,7 +18,7 @@ def create_backup(user=None, note=""):
 
     today = jdatetime.datetime.now()
     timestamp = today.strftime("%Y%m%d_%H%M%S")
-    file_name = f"tabib_backup_{timestamp}.zip"
+    file_name = f"moshaver_backup_{timestamp}.zip"
     file_path = BACKUP_DIR / file_name
 
     try:

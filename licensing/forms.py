@@ -59,7 +59,7 @@ class ActivateLicenseForm(forms.Form):
         max_length=100,
         widget=forms.TextInput(attrs={
             "class": "form-control form-control-lg text-center",
-            "placeholder": "TABIB-XXXX-XXXX-XXXX-XXXX",
+            "placeholder": "MSHV-XXXX-XXXX-XXXX-XXXX",
             "style": "direction: ltr; letter-spacing: 2px; font-family: monospace;",
             "autocomplete": "off",
         }),

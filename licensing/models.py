@@ -99,7 +99,7 @@ class License(models.Model):
         for _ in range(4):
             part = "".join(random.choices(chars, k=4))
             parts.append(part)
-        return f"TABIB-{'-'.join(parts)}"
+        return f"MSHV-{'-'.join(parts)}"
 
     def _generate_serial(self):
         import jdatetime

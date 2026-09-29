@@ -1593,3 +1593,167 @@ markdown
 
 **راه‌حل پیشنهادی:** یک migration بنویس که مقادیر legacy را به `other` تبدیل
 کند و مقادیر جدید را اضافه کند. جزئیات در فایل `AI_CONTEXT.md` ثبت شده.
+
+بخش ۱: اضافه به PROJECT_HANDBOOK.md
+۱.۱) در بخش «۹. تله‌ها و بدهی‌های فنی» — اضافه کن به لیست تله‌ها
+markdown
+### ⚠️ ۱۵) اعلان تغییر برنامه — الگوی دقیق (رعایت شود)
+
+اعلان‌های تغییر برنامه از طریق `accounts/views/consultants/_helpers.py` ساخته
+می‌شوند. قواعد مهم:
+
+**۱. لینک حتماً با `reverse()` ساخته شود، نه رشته دستی:**
+```python
+# ❌ غلط — اگه URL عوض بشه، می‌شکنه
+link = f"/accounts/consultants/{consultant.pk}/month-schedule/"
+
+# ✅ درست
+from django.urls import reverse
+link = reverse("consultant_month_schedule", kwargs={"pk": consultant.pk})
+۲. اعلان فقط اگه واقعاً چیزی عوض شده باشد.
+از _schedule_diff_message(before, after) استفاده کن که None برمی‌گرداند
+اگر تفاوتی نبود. این جلوی اعلان‌های تکراری را می‌گیرد.
+
+۳. پیام اعلان باید دقیقاً بگوید چه چیزی عوض شد:
+
+تغییر ساعت: شنبه ۴ مهر ۱۴۰۵ — ساعت ۰۸:۰۰–۱۴:۰۰ → ۰۸:۰۰–۱۷:۰۰
+
+تعطیل شدن: شنبه ۴ مهر ۱۴۰۵ — تعطیل شد (قبلاً ۰۸:۰۰–۱۴:۰۰)
+
+فعال شدن: شنبه ۴ مهر ۱۴۰۵ — فعال شد — ۰۸:۰۰–۱۶:۰۰
+
+ساعت غیرفعال: شنبه ۴ مهر ۱۴۰۵ — ساعت غیرفعال اضافه شد: ۱۲
+
+۴. توابع کلیدی در _helpers.py:
+
+تابع	کاربرد
+_get_effective_schedule(consultant, date)	وضعیت مؤثر روز (override یا الگوی هفتگی)
+_schedule_diff_message(before, after)	تولید پیام diff (None اگر تفاوت نبود)
+_notify_schedule_change(request, consultant, message)	ارسال اعلان به منشی/مدیر
+_fa(text)	تبدیل ارقام به فارسی
+_jalali_full(date)	۴ مهر ۱۴۰۵
+_jalali_weekday(date)	شنبه
+۵. هشدار: اگر URL جدیدی برای تقویم مشاور اضافه کردی، حتماً
+_notify_schedule_change را بررسی کن که reverse درست داشته باشد.
+
+text
+
+### ۱.۲) در بخش «۱۱. Roadmap» — بخش «در حال انجام» را با این جایگزین کن
+
+```markdown
+### 🟡 در حال انجام
+- اصلاحات فاز ۵
+- بازنویسی `WeeklySchedule` legacy
+- تغییر نام `physician` → `consultant`
+- رفع برند `tabib` از لایسنس
+
+### ✅ به‌تازگی اصلاح‌شده (changelog)
+
+**نسخه 1.0.1 — بهبود اعلان‌های تغییر برنامه**
+
+- 🔧 رفع باگ لینک `month-schedule` → `month` در اعلان‌ها
+  (استفاده از `reverse()` به‌جای رشته دستی)
+- ✨ اعلان‌ها الان diff دقیق نشان می‌دهند:
+  - تغییر ساعت با فرمت `ساعت ۰۸:۰۰–۱۴:۰۰ → ۰۸:۰۰–۱۷:۰۰`
+  - تعطیل/فعال شدن روز
+  - تغییر ساعت‌های غیرفعال (ناهار، نماز، ...)
+- 🐛 رفع مشکل اعلان تکراری — اگر چیزی عوض نشده باشد، اعلانی نمی‌رود
+- 📦 توابع کمکی جدید در `_helpers.py`:
+  `_get_effective_schedule`, `_schedule_diff_message`, `_fa`
+- 📝 ارقام در پیام‌ها به فارسی تبدیل می‌شوند
+۱.۳) یک بخش جدید به آخر فایل اضافه کن (قبل از ## 📌 پایان)
+markdown
+## ۱۳. Change Log
+
+> تاریخچه‌ی تغییرات مهم پروژه. هر تغییر مهم اینجا ثبت شود.
+
+### 1.0.1 — ۱۴۰۵/۰۷/۰۷
+
+**موضوع:** بهبود سیستم اعلان تغییر برنامه
+
+**فایل‌های تغییر‌یافته:**
+- `accounts/views/consultants/_helpers.py` — بازنویسی کامل
+- `accounts/views/consultants/api.py` — بازنویسی کامل
+
+**تغییرات:**
+- رفع باگ URL `month-schedule` → `month`
+- پیام اعلان با diff دقیق
+- حل مشکل اعلان تکراری
+- توابع جدید: `_get_effective_schedule`, `_schedule_diff_message`, `_fa`
+- تبدیل ارقام به فارسی در پیام‌ها
+
+**نکته برای توسعه‌دهنده آینده:** اگر روی `_notify_schedule_change` تغییر دادی،
+حتماً تست کن که با `reverse()` لینک ساخته می‌شود و diff قبل/بعد درست کار می‌کند.
+
+---
+
+### 1.0.0 — شروع پروژه
+
+منشعب از «طبیب». ۱۳ اپ، ۵ فاز تکمیل‌شده.
+📄 بخش ۲: اضافه به AI_CONTEXT.md
+۲.۱) در بخش «۵. Core Concepts»، بعد از 5.13 Notifications، اضافه کن
+markdown
+### 5.21 Schedule Notification Helpers
+
+توابع کلیدی در `accounts/views/consultants/_helpers.py`:
+
+```python
+_get_effective_schedule(consultant, date)  # dict: {is_active, start, end, blocked_hours, source}
+_schedule_diff_message(before, after)      # str | None
+_notify_schedule_change(request, consultant, message)
+_fa(text)                                  # تبدیل به ارقام فارسی
+الگوی استفاده در api_save_day_schedule:
+
+python
+# ۱. قبل
+before_state = _get_effective_schedule(consultant, target_date)
+
+# ۲. تغییر (delete + create override)
+
+# ۳. بعد
+after_state = _get_effective_schedule(consultant, target_date)
+
+# ۴. diff
+diff = _schedule_diff_message(before_state, after_state)
+if diff:
+    message = _fa(f"{day_label} — {diff}")
+    _notify_schedule_change(request, consultant, message)
+قواعد طلایی:
+
+اعلان فقط وقتی diff is not None
+
+لینک همیشه با reverse("consultant_month_schedule", kwargs={"pk": ...})
+
+پیام حتماً شامل روز و نوع تغییر باشه
+
+ارقام با _fa() به فارسی تبدیل بشن
+
+text
+
+### ۲.۲) در بخش «۹. Do's and Don'ts»، اضافه کن
+
+### ✅ باید
+- اعلان تغییر برنامه حتماً با `_notify_schedule_change` (که `reverse` دارد)
+- قبل از اعلان، با `_schedule_diff_message` چک کن که واقعاً تغییری هست
+- پیام‌های کاربرپسند با `_fa()` و `_jalali_full()` بساز
+
+### ❌ نباید
+- لینک اعلان رو دستی (`f"/accounts/..."`) بسازی — `reverse` استفاده کن
+- بدون چک کردن diff، اعلان بفرستی — باعث اعلان تکراری می‌شه
+
+### ۲.۳) در بخش «۱۰. Quick Reference» → جدول خطاهای رایج، این خطوط رو اضافه کن
+
+| خطا | راه‌حل |
+|-----|--------|
+| `NoReverseMatch: consultant_month_schedule` | `accounts/urls.py` رو چک کن — نام URL باید `consultant_month_schedule` باشد |
+| اعلان‌های قدیمی با لینک خراب | `Notification.objects.filter(link__contains="month-schedule").delete()` |
+| اعلان تکراری | `_schedule_diff_message` قبل از `_notify_schedule_change` |
+
+---
+
+## 🎯 بعد از اضافه کردن
+
+```powershell
+git add -A
+git commit -m "docs: به‌روزرسانی اسناد با بهبود سیستم اعلان تغییر برنامه (v1.0.1)"
+git push origin master

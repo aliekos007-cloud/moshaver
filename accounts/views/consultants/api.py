@@ -2,7 +2,6 @@
 import json as json_lib
 from datetime import datetime as dt
 
-import jdatetime
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -10,17 +9,19 @@ from django.http import JsonResponse
 
 from ...models import User
 from audit.models import log_action
-from ._helpers import _notify_schedule_change
+from ._helpers import (
+    _notify_schedule_change,
+    _get_effective_schedule,
+    _schedule_diff_message,
+    _jalali_full,
+    _jalali_weekday,
+    _fa,
+)
 
 
-def _to_jalali_str(g_date):
-    """تبدیل تاریخ میلادی به رشته شمسی مثل: ۴ مهر ۱۴۰۵"""
-    months = [
-        "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
-        "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
-    ]
-    j = jdatetime.date.fromgregorian(date=g_date)
-    return f"{j.day} {months[j.month - 1]} {j.year}"
+def _day_label(target_date):
+    """برچسب خوانا برای روز — مثلاً: شنبه ۴ مهر ۱۴۰۵"""
+    return f"{_jalali_weekday(target_date)} {_jalali_full(target_date)}"
 
 
 @require_POST
@@ -94,6 +95,10 @@ def api_save_day_schedule(request, pk):
     except (ValueError, TypeError):
         blocked_hours = []
 
+    # ===== ۱. ثبت وضعیت قبل از تغییر =====
+    before_state = _get_effective_schedule(consultant, target_date)
+
+    # ===== ۲. اعمال تغییر =====
     ConsultantScheduleOverride.objects.filter(
         consultant=consultant,
         from_date__lte=target_date,
@@ -112,25 +117,29 @@ def api_save_day_schedule(request, pk):
         created_by=request.user,
     )
 
-    jalali_date_str = _to_jalali_str(target_date)
+    # ===== ۳. ثبت وضعیت بعد از تغییر =====
+    after_state = _get_effective_schedule(consultant, target_date)
+
+    day_label = _day_label(target_date)
 
     log_action(
         request, "update_day_schedule", consultant,
-        description=f"ویرایش برنامهٔ روز {jalali_date_str} — {consultant.get_full_name()}",
+        description=f"ویرایش برنامهٔ روز {day_label} — {consultant.get_full_name()}",
     )
 
+    # ===== ۴. اعلان فقط اگه واقعاً چیزی عوض شده =====
     if is_self and role == "consultant":
         log_action(
             request, "consultant_schedule_change", consultant,
             description=(
-                f"مشاور {consultant.get_full_name()} برنامهٔ روز {jalali_date_str} را تغییر داد"
+                f"مشاور {consultant.get_full_name()} برنامهٔ روز {day_label} را تغییر داد"
             ),
         )
-        _notify_schedule_change(
-            request,
-            "برنامه یک روز تغییر کرد",
-            detail=jalali_date_str,
-        )
+
+        diff = _schedule_diff_message(before_state, after_state)
+        if diff:
+            message = _fa(f"{day_label} — {diff}")
+            _notify_schedule_change(request, consultant, message)
 
     return JsonResponse({
         "ok": True,
@@ -175,6 +184,9 @@ def api_reset_day_schedule(request, pk):
             "error": "نمی‌توانید روزهای گذشته را تغییر دهید."
         }, status=400)
 
+    # ===== ۱. وضعیت قبل از ریست =====
+    before_state = _get_effective_schedule(consultant, target_date)
+
     deleted_count = ConsultantScheduleOverride.objects.filter(
         consultant=consultant,
         from_date=target_date,
@@ -182,24 +194,27 @@ def api_reset_day_schedule(request, pk):
     ).delete()[0]
 
     if deleted_count:
-        jalali_date_str = _to_jalali_str(target_date)
+        # ===== ۲. وضعیت بعد از ریست =====
+        after_state = _get_effective_schedule(consultant, target_date)
+        day_label = _day_label(target_date)
 
         log_action(
             request, "reset_day_schedule", consultant,
-            description=f"بازگشت برنامهٔ روز {jalali_date_str} به الگو — {consultant.get_full_name()}",
+            description=f"بازگشت برنامهٔ روز {day_label} به الگو — {consultant.get_full_name()}",
         )
+
         if is_self and role == "consultant":
             log_action(
                 request, "consultant_schedule_change", consultant,
                 description=(
-                    f"مشاور {consultant.get_full_name()} برنامهٔ روز {jalali_date_str} را به الگو بازگرداند"
+                    f"مشاور {consultant.get_full_name()} برنامهٔ روز {day_label} را به الگو بازگرداند"
                 ),
             )
-            _notify_schedule_change(
-                request,
-                "برنامه یک روز به پیش‌فرض برگشت",
-                detail=jalali_date_str,
-            )
+
+            diff = _schedule_diff_message(before_state, after_state)
+            if diff:
+                message = _fa(f"{day_label} — {diff}")
+                _notify_schedule_change(request, consultant, message)
 
     return JsonResponse({
         "ok": True,

@@ -43,7 +43,7 @@ def _file_path():
         base = Path(os.environ.get("APPDATA", Path.home()))
     else:
         base = Path.home()
-    path = base / ".tabib"
+    path = base / ".moshaver"
     path.mkdir(exist_ok=True)
     return path / "install.json"
 
@@ -119,7 +119,7 @@ def _read_from_registry():
         import winreg
         key = winreg.OpenKey(
             winreg.HKEY_CURRENT_USER,
-            r"Software\Tabib\Install",
+            r"Software\Moshaver\Install",
             0, winreg.KEY_READ,
         )
         first_run, _ = winreg.QueryValueEx(key, "FirstRun")
@@ -142,7 +142,7 @@ def _write_to_registry(data):
         import winreg
         key = winreg.CreateKeyEx(
             winreg.HKEY_CURRENT_USER,
-            r"Software\Tabib\Install",
+            r"Software\Moshaver\Install",
             0, winreg.KEY_WRITE,
         )
         payload = {"first_run": data["first_run"], "fingerprint": data["fingerprint"]}
