@@ -9,3 +9,11 @@ staticfiles/
 backups/
 .env
 *.log
+.venv/
+env/
+.idea/
+.vscode/
+.DS_Store
+logs/
+structure.txt
+*.sqlite3
